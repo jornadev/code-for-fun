@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'login_screen.dart';
+import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -16,9 +18,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    //animacao
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 2500),
       vsync: this,
     );
 
@@ -32,19 +33,28 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.5, 1.0, curve: Curves.easeIn), // A opacidade só começa a mudar na metade da animação
+        curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
       ),
     );
 
-    _controller.forward();
+    _controller.forward().then((_) {
+      _checkAuthenticationStatus();
+    });
+  }
 
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) {
+  void _checkAuthenticationStatus() {
+    if (mounted) {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const LoginScreen()),
         );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
       }
-    });
+    }
   }
 
   @override
