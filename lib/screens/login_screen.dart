@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../constants/app_colors.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,12 +16,45 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final _auth = FirebaseAuth.instance;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.red,
+      ),
+    );
+  }
+
+  Future<void> _signIn() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        await _auth.signInWithEmailAndPassword(
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        }
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'user-not-found' || e.code == 'wrong-password') {
+          _showErrorSnackBar('Credenciais inválidas. Verifique seu e-mail e senha.');
+        } else {
+          _showErrorSnackBar('Ocorreu um erro no login. Tente novamente.');
+        }
+      }
+    }
   }
 
   @override
@@ -35,7 +70,6 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 60),
-                
                 Center(
                   child: RichText(
                     text: const TextSpan(
@@ -64,7 +98,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 30),
-                
                 Center(
                   child: Image.asset(
                     'assets/images/duck.png',
@@ -86,7 +119,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 50),
-                
                 const Text(
                   'E-mail',
                   style: TextStyle(
@@ -123,7 +155,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                
                 const Text(
                   'Senha',
                   style: TextStyle(
@@ -157,7 +188,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 const SizedBox(height: 12),
-                
                 Align(
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
@@ -175,20 +205,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-                
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Login realizado com sucesso!'),
-                          ),
-                        );
-                      }
-                    },
+                    onPressed: _signIn,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.buttonPurple,
                       foregroundColor: AppColors.white,
@@ -207,7 +228,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 30),
-                
                 Center(
                   child: SizedBox(
                     width: double.infinity,
@@ -216,7 +236,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Login com Google realizado!'),
+                            content: Text('Login com Google não implementado.'),
                           ),
                         );
                       },
@@ -244,7 +264,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-                
                 Center(
                   child: RichText(
                     text: TextSpan(
@@ -279,5 +298,4 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-
 }

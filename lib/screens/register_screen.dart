@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../constants/app_colors.dart';
 import 'login_screen.dart';
+import 'home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -15,6 +17,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final _auth = FirebaseAuth.instance;
 
   @override
   void dispose() {
@@ -23,6 +26,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.red,
+      ),
+    );
+  }
+
+  Future<void> _signUp() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        await _auth.createUserWithEmailAndPassword(
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        }
+      } on FirebaseAuthException catch (e) {
+        // Loga o erro no console para fins de depuração
+        print('Firebase Auth Error Code: ${e.code}');
+        print('Firebase Auth Error Message: ${e.message}');
+
+        if (e.code == 'weak-password') {
+          _showErrorSnackBar('A senha é muito fraca.');
+        } else if (e.code == 'email-already-in-use') {
+          _showErrorSnackBar('O e-mail já está em uso.');
+        } else {
+          // Mostra o erro exato do Firebase
+          _showErrorSnackBar('Ocorreu um erro: ${e.message}');
+        }
+      }
+    }
   }
 
   @override
@@ -38,7 +79,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 60),
-                
                 Center(
                   child: RichText(
                     text: const TextSpan(
@@ -67,7 +107,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 30),
-                
                 Center(
                   child: Image.asset(
                     'assets/images/duck.png',
@@ -89,7 +128,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-                
                 const Text(
                   'Nome Completo',
                   style: TextStyle(
@@ -126,7 +164,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
                 const SizedBox(height: 20),
-                
                 const Text(
                   'E-mail',
                   style: TextStyle(
@@ -163,7 +200,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
                 const SizedBox(height: 20),
-                
                 const Text(
                   'Senha',
                   style: TextStyle(
@@ -200,7 +236,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
                 const SizedBox(height: 20),
-                
                 const Text(
                   'Confirmar Senha',
                   style: TextStyle(
@@ -237,23 +272,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
                 const SizedBox(height: 30),
-                
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Cadastro realizado com sucesso!'),
-                          ),
-                        );
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (context) => const LoginScreen()),
-                        );
-                      }
-                    },
+                    onPressed: _signUp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.buttonPurple,
                       foregroundColor: AppColors.white,
@@ -272,7 +295,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 30),
-                
                 Center(
                   child: SizedBox(
                     width: double.infinity,
@@ -281,11 +303,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Cadastro com Google realizado!'),
+                            content: Text('Cadastro com Google não implementado.'),
                           ),
-                        );
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (context) => const LoginScreen()),
                         );
                       },
                       icon: const Icon(
@@ -312,7 +331,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-                
                 Center(
                   child: RichText(
                     text: TextSpan(
@@ -347,5 +365,4 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
-
 }
