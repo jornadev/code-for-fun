@@ -1,7 +1,6 @@
 .idea
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
-lib/firebase_options.dart
 ios/Podfile.lock
 ios/Pods
 # Miscellaneous
