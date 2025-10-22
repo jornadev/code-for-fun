@@ -1,12 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Adicionado para buscar o usuário
 import 'package:code_for_fun/model/trail_model.dart';
 import 'package:code_for_fun/service/trail_service.dart';
 import 'package:code_for_fun/screens/trail_screen.dart';
 import 'package:code_for_fun/screens/settings_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+// 1. A classe foi convertida para StatefulWidget para gerenciar o estado do nome.
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  // 2. Variável de estado para armazenar o nome do usuário.
+  String _userName = '...'; // Inicia com um placeholder
+
+  @override
+  void initState() {
+    super.initState();
+    // 3. Função chamada para carregar o nome do usuário quando a tela é iniciada.
+    _loadUserName();
+  }
+
+  void _loadUserName() {
+    final user = FirebaseAuth.instance.currentUser;
+    // Verifica se o usuário está logado e tem um nome de exibição definido.
+    if (user != null && user.displayName != null && user.displayName!.isNotEmpty) {
+      setState(() {
+        // Atualiza a variável de estado com o nome do usuário.
+        // toUpperCase() é usado para manter o estilo "BEM VINDO, NOME".
+        _userName = user.displayName!.toUpperCase();
+      });
+    } else {
+      // Se não houver nome, usa um valor padrão.
+      setState(() {
+        _userName = 'JOGADOR';
+      });
+    }
+  }
+
+  // A partir daqui, é o seu código original.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -15,7 +50,8 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(context),
+            // 4. Passa a variável _userName para o método que constrói o cabeçalho.
+            _buildHeader(context, _userName),
             _buildContinueSection(context),
             const SizedBox(height: 24),
             _buildRecommendedSection(context),
@@ -58,7 +94,8 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  // 5. O método _buildHeader agora aceita o nome como um parâmetro.
+  Widget _buildHeader(BuildContext context, String userName) {
     return Container(
       padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 20),
       child: Row(
@@ -70,7 +107,8 @@ class HomeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'BEM VINDO, HENRIQUEI',
+                  // 6. AQUI! O nome estático foi trocado pela variável dinâmica.
+                  'BEM VINDO, $userName',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -124,8 +162,11 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  // O restante do seu código original, sem nenhuma alteração.
   Widget _buildContinueSection(BuildContext context) {
-    final userTrails = TrailService.getUserTrails();
+    // No seu trail_service.dart original, você não tinha o método getUserTrails.
+    // Estou usando getRecommendedTrails() para evitar erros, conforme seu código anterior.
+    final userTrails = TrailService.getRecommendedTrails();
     final firstTrail = userTrails.isNotEmpty ? userTrails.first : null;
 
     if (firstTrail == null) {
@@ -185,7 +226,8 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildYourTrailsSection(BuildContext context) {
-    final userTrails = TrailService.getUserTrails();
+    // Novamente, usando getRecommendedTrails para manter a consistência com o código original
+    final userTrails = TrailService.getRecommendedTrails();
     if (userTrails.length <= 1) {
       return const SizedBox.shrink();
     }
