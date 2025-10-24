@@ -1,9 +1,9 @@
-// lib/screens/register_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../constants/app_colors.dart';
 import 'login_screen.dart';
-import 'home_screen.dart';
+// import 'home_screen.dart'; // Removido
+import 'main_navigation_screen.dart'; // Adicionado
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -41,26 +41,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _signUp() async {
     if (_formKey.currentState!.validate()) {
       try {
-        // 1. Cria o usuário com email e senha
         UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
           email: _emailController.text,
           password: _passwordController.text,
         );
 
-        // 2. ATUALIZAÇÃO IMPORTANTE: Salva o nome do usuário no perfil
         if (userCredential.user != null) {
           await userCredential.user!.updateDisplayName(_nameController.text);
+          // Recarregue o usuário para garantir que o displayName seja atualizado
+          await userCredential.user!.reload();
         }
 
-        // 3. Navega para a HomeScreen
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
+            // --- LINHA MODIFICADA ---
+            MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
           );
         }
       } on FirebaseAuthException catch (e) {
-        // Trata erros específicos do Firebase
         if (e.code == 'weak-password') {
           _showErrorSnackBar('A senha fornecida é muito fraca.');
         } else if (e.code == 'email-already-in-use') {
@@ -69,7 +68,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           _showErrorSnackBar('Ocorreu um erro: ${e.message}');
         }
       } catch (e) {
-        // Trata outros erros
         _showErrorSnackBar('Ocorreu um erro inesperado.');
       }
     }

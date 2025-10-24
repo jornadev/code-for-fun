@@ -4,19 +4,19 @@ import 'package:code_for_fun/model/trail_model.dart';
 import 'package:code_for_fun/model/lesson_model.dart';
 
 class TrailService {
-  // Lista de todas as trilhas disponíveis no app
+  // Esta é a lista principal de todos os cursos, com progresso zerado
   static final List<Trail> _allTrails = [
     const Trail(
       id: 'java',
       title: 'Formação Java',
       icon: Icons.coffee,
       level: 'Intermediário',
-      progress: 0.75,
+      progress: 0.0, // <-- Progresso zerado
       lessons: [
         Lesson(
           id: 'l1',
           title: 'Introdução ao Java',
-          isCompleted: true,
+          isCompleted: false,
           questions: [
             Question(
               id: 'q1',
@@ -34,31 +34,15 @@ class TrailService {
       iconColor: Colors.orange,
     ),
     const Trail(
-      id: 'logic',
-      title: 'Lógica de Programação',
-      icon: Icons.lightbulb_outline,
+      id: 'python',
+      title: 'Python do Básico',
+      icon: Icons.code,
       level: 'Iniciante',
-      progress: 0.25,
+      progress: 0.0, // <-- Progresso zerado
       lessons: [
         Lesson(
-          id: 'l1',
-          title: 'O que é um algoritmo?',
-          isCompleted: true,
-          questions: [
-            Question(
-              id: 'q1',
-              text: 'Qual o principal objetivo de um algoritmo?',
-              answers: [
-                Answer(id: 'a1', text: 'Criar designs', isCorrect: false),
-                Answer(id: 'a2', text: 'Resolver um problema', isCorrect: true),
-                Answer(id: 'a3', text: 'Compor músicas', isCorrect: false),
-              ],
-            ),
-          ],
-        ),
-        Lesson(
           id: 'l2',
-          title: 'Variáveis e Constantes',
+          title: 'Conceitos Básicos',
           isCompleted: false,
           questions: [
             Question(
@@ -86,22 +70,24 @@ class TrailService {
       title: 'Estrutura de dados',
       icon: Icons.share,
       level: 'Intermediário',
-      progress: 0.0,
+      progress: 0.0, // <-- Progresso zerado
       lessons: [],
       iconColor: Colors.blue,
     ),
   ];
 
-  // Método para a seção "Recomendados"
+  /// Retorna TODAS as trilhas (para a seção "Trilhas Recomendadas" e "Suas Trilhas")
   static List<Trail> getRecommendedTrails() {
-    // No futuro, você pode adicionar uma lógica aqui para recomendar trilhas
     return _allTrails;
   }
 
-  // MÉTODO CORRIGIDO QUE ESTAVA FALTANDO
-  // Método para a seção "Suas Trilhas"
-  static List<Trail> getYourTrails() {
-    // No futuro, você pode filtrar para mostrar apenas as trilhas que o usuário começou
-    return _allTrails.where((trail) => trail.progress > 0).toList();
+  /// <-- MÉTODO ADICIONADO -->
+  /// Retorna APENAS as trilhas que o usuário começou (progresso > 0)
+  static List<Trail> getInProgressTrails() {
+    // No seu serviço mockado, o progresso está sempre 0.0.
+    // Esta função filtra corretamente, mas só retornará algo
+    // se você mudar o valor de 'progress' em _allTrails para > 0.0
+    // para fins de teste.
+    return _allTrails.where((trail) => trail.progress > 0.0).toList();
   }
 }
