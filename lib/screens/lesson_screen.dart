@@ -3,6 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:code_for_fun/model/lesson_model.dart';
 import 'package:code_for_fun/model/trail_model.dart';
 
+// --- Imports adicionados ---
+import 'package:provider/provider.dart';
+import 'package:code_for_fun/providers/score_provider.dart';
+// --- Fim dos imports adicionados ---
+
+
 class LessonScreen extends StatefulWidget {
   final Lesson lesson;
 
@@ -27,6 +33,15 @@ class _LessonScreenState extends State<LessonScreen> {
       );
       return;
     }
+
+    // --- Lógica de pontuação adicionada ---
+    final bool isCorrect = _selectedAnswer?.isCorrect ?? false;
+    if (isCorrect) {
+      // Chama o provider para incrementar a pontuação
+      Provider.of<ScoreProvider>(context, listen: false).incrementScore();
+    }
+    // --- Fim da lógica de pontuação ---
+
     setState(() {
       _isAnswerChecked = true;
     });
@@ -135,13 +150,13 @@ class _LessonScreenState extends State<LessonScreen> {
 
     Color buttonColor;
     if (isIncorrect) {
-      buttonColor = const Color(0xFFDC3545);
+      buttonColor = Colors.red[700]!;
     } else if (isCorrect) {
-      buttonColor = const Color(0xFF28A745);
+      buttonColor = Colors.green[700]!;
     } else if (isSelected) {
-      buttonColor = const Color(0xFF6C757D);
+      buttonColor = Colors.grey[600]!;
     } else {
-      buttonColor = const Color(0xFF495057);
+      buttonColor = Colors.grey[800]!;
     }
 
     return Padding(
@@ -155,27 +170,28 @@ class _LessonScreenState extends State<LessonScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: buttonColor,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 20),
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: isSelected ? const BorderSide(color: Colors.white, width: 2) : BorderSide.none,
+            borderRadius: BorderRadius.circular(15),
+            side: isSelected && !_isAnswerChecked
+                ? const BorderSide(color: Colors.white, width: 2)
+                : BorderSide.none,
           ),
-          elevation: 0,
         ),
         child: Text(
           answer.text,
           style: const TextStyle(fontSize: 16),
+          textAlign: TextAlign.center,
         ),
       ),
     );
   }
 
   Widget _buildVerifyButton() {
-    final bool isButtonEnabled = _selectedAnswer != null && !_isAnswerChecked;
     return ElevatedButton(
-      onPressed: isButtonEnabled ? _checkAnswer : null,
+      onPressed: _checkAnswer,
       style: ElevatedButton.styleFrom(
-        backgroundColor: isButtonEnabled ? Colors.green : Colors.grey[600],
+        backgroundColor: Colors.green,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 20),
         shape: RoundedRectangleBorder(
@@ -217,7 +233,11 @@ class _LessonScreenState extends State<LessonScreen> {
                 borderRadius: BorderRadius.circular(30),
               ),
             ),
-            child: const Text('CONTINUAR'),
+            child: Text(
+              _currentQuestionIndex < widget.lesson.questions.length - 1
+                  ? 'CONTINUAR'
+                  : 'FINALIZAR',
+            ),
           ),
         ],
       ),

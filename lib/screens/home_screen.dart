@@ -1,64 +1,63 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:code_for_fun/model/trail_model.dart';
 import 'package:code_for_fun/service/trail_service.dart';
 import 'package:code_for_fun/screens/trail_screen.dart';
-import 'package:code_for_fun/screens/settings_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:code_for_fun/providers/score_provider.dart';
+import 'package:code_for_fun/constants/app_colors.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  String _userName = '...';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+    Provider.of<ScoreProvider>(context, listen: false).loadUserScore();
+  }
+
+  void _loadUserName() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && user.displayName != null && user.displayName!.isNotEmpty) {
+      setState(() {
+        _userName = user.displayName!.toUpperCase();
+      });
+    } else {
+      setState(() {
+        _userName = 'JOGADOR';
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF0F0F5),
-      body: SingleChildScrollView(
+    return SingleChildScrollView(
+      child: Container(
+        color: const Color(0xFFF0F0F5),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(context),
+            _buildHeader(context, _userName),
             _buildContinueSection(context),
-            const SizedBox(height: 24),
             _buildRecommendedSection(context),
             const SizedBox(height: 24),
             _buildYourTrailsSection(context),
+            const SizedBox(height: 24),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.deepPurple,
-        unselectedItemColor: Colors.grey[400],
-        type: BottomNavigationBarType.fixed,
-        onTap: (index) {
-          if (index == 3) {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => const SettingsScreen()),
-            );
-          }
-        },
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.emoji_events),
-            label: 'Ranking',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Perfil',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Ajustes',
-          ),
-        ],
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, String userName) {
     return Container(
       padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 20),
       child: Row(
@@ -70,7 +69,7 @@ class HomeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'BEM VINDO, HENRIQUEI',
+                  'BEM VINDO, $userName',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -100,23 +99,23 @@ class HomeScreen extends StatelessWidget {
                 ),
               ],
             ),
-            child: Row(
-              children: [
-                const Text(
-                  '250',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.deepPurple,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.star,
-                  color: Colors.amber,
-                  size: 20,
-                ),
-              ],
+            child: Consumer<ScoreProvider>(
+              builder: (context, provider, child) {
+                return Row(
+                  children: [
+                    const Icon(Icons.star, color: Colors.amber, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      provider.isLoading ? '...' : provider.score.toString(),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurple,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -125,12 +124,11 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildContinueSection(BuildContext context) {
-    final userTrails = TrailService.getUserTrails();
-    final firstTrail = userTrails.isNotEmpty ? userTrails.first : null;
-
-    if (firstTrail == null) {
+    final inProgressTrails = TrailService.getInProgressTrails();
+    if (inProgressTrails.isEmpty) {
       return const SizedBox.shrink();
     }
+    final firstTrail = inProgressTrails.first;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -149,6 +147,7 @@ class HomeScreen extends StatelessWidget {
             context,
             trail: firstTrail,
           ),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -185,33 +184,26 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildYourTrailsSection(BuildContext context) {
-    final userTrails = TrailService.getUserTrails();
-    if (userTrails.length <= 1) {
-      return const SizedBox.shrink();
-    }
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Suas trilhas',
+            'Suas Trilhas',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 16),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: userTrails.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 16),
-            itemBuilder: (context, index) {
-              final trail = userTrails[index];
-              return _buildProgressCard(context, trail: trail);
-            },
+          Column(
+            children: TrailService.getRecommendedTrails().map((trail) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _buildProgressCard(context, trail: trail),
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -219,50 +211,66 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildProgressCard(BuildContext context, {required Trail trail}) {
+    String percentageLabel = '${(trail.progress * 100).toInt()}%';
+
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
+        Navigator.of(context).push(
           MaterialPageRoute(builder: (context) => TrailScreen(trail: trail)),
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
               blurRadius: 10,
-              offset: const Offset(0, 5),
             ),
           ],
         ),
-        child: Row(
+        child: Column(
           children: [
-            CircleAvatar(
-              radius: 25,
-              backgroundColor: trail.iconColor.withOpacity(0.1),
-              child: Icon(trail.icon, color: trail.iconColor, size: 30),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    trail.title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: trail.iconColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 4),
-                  _buildProgressBar(trail.progress, '${(trail.progress * 100).toStringAsFixed(0)}%'),
-                ],
-              ),
+                  child: Icon(trail.icon, color: trail.iconColor, size: 28),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        trail.title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${trail.lessons.length} Lições • ${trail.level}',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: Colors.grey[400]),
+              ],
             ),
+            const SizedBox(height: 16),
+            _buildProgressBar(trail.progress, percentageLabel),
           ],
         ),
       ),
@@ -272,8 +280,7 @@ class HomeScreen extends StatelessWidget {
   Widget _buildTrailCard(BuildContext context, {required Trail trail}) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
+        Navigator.of(context).push(
           MaterialPageRoute(builder: (context) => TrailScreen(trail: trail)),
         );
       },
@@ -282,28 +289,30 @@ class HomeScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
               blurRadius: 10,
-              offset: const Offset(0, 5),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: trail.iconColor.withOpacity(0.1),
-              child: Icon(trail.icon, color: trail.iconColor),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: trail.iconColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(trail.icon, color: trail.iconColor, size: 24),
             ),
             const SizedBox(height: 12),
             Text(
               trail.title,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
             ),

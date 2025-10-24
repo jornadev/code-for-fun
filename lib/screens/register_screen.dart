@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../constants/app_colors.dart';
 import 'login_screen.dart';
-import 'home_screen.dart';
+// import 'home_screen.dart'; // Removido
+import 'main_navigation_screen.dart'; // Adicionado
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -40,28 +41,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _signUp() async {
     if (_formKey.currentState!.validate()) {
       try {
-        await _auth.createUserWithEmailAndPassword(
+        UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
           email: _emailController.text,
           password: _passwordController.text,
         );
+
+        if (userCredential.user != null) {
+          await userCredential.user!.updateDisplayName(_nameController.text);
+          // Recarregue o usuário para garantir que o displayName seja atualizado
+          await userCredential.user!.reload();
+        }
+
         if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          Navigator.pushReplacement(
+            context,
+            // --- LINHA MODIFICADA ---
+            MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
           );
         }
       } on FirebaseAuthException catch (e) {
-        // Loga o erro no console para fins de depuração
-        print('Firebase Auth Error Code: ${e.code}');
-        print('Firebase Auth Error Message: ${e.message}');
-
         if (e.code == 'weak-password') {
-          _showErrorSnackBar('A senha é muito fraca.');
+          _showErrorSnackBar('A senha fornecida é muito fraca.');
         } else if (e.code == 'email-already-in-use') {
-          _showErrorSnackBar('O e-mail já está em uso.');
+          _showErrorSnackBar('O e-mail já está em uso por outra conta.');
         } else {
-          // Mostra o erro exato do Firebase
           _showErrorSnackBar('Ocorreu um erro: ${e.message}');
         }
+      } catch (e) {
+        _showErrorSnackBar('Ocorreu um erro inesperado.');
       }
     }
   }
@@ -78,7 +85,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 60),
+                const SizedBox(height: 40),
                 Center(
                   child: RichText(
                     text: const TextSpan(
@@ -95,238 +102,110 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       children: [
                         TextSpan(
-                          text: 'aprenda na ',
-                          style: TextStyle(color: AppColors.black),
+                          text: 'Code',
+                          style: TextStyle(color: AppColors.textDark),
                         ),
                         TextSpan(
-                          text: 'prática',
-                          style: TextStyle(color: AppColors.primaryPurple),
+                          text: '4',
+                          style: TextStyle(color: AppColors.secondaryPurple),
+                        ),
+                        TextSpan(
+                          text: 'Fun',
+                          style: TextStyle(color: AppColors.textDark),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 30),
-                Center(
-                  child: Image.asset(
-                    'assets/images/duck.png',
-                    width: 120,
-                    height: 120,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        width: 120,
-                        height: 120,
-                        color: AppColors.primaryPurple,
-                        child: const Icon(
-                          Icons.pets,
-                          size: 60,
-                          color: AppColors.white,
-                        ),
-                      );
-                    },
-                  ),
-                ),
                 const SizedBox(height: 40),
                 const Text(
-                  'Nome Completo',
+                  'Crie sua conta',
                   style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
                     color: AppColors.textDark,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 24),
                 TextFormField(
                   controller: _nameController,
-                  keyboardType: TextInputType.name,
                   decoration: InputDecoration(
-                    hintText: 'Digite seu nome completo',
-                    filled: true,
-                    fillColor: AppColors.inputGray,
+                    labelText: 'Nome',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
                     ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Por favor, digite seu nome completo';
-                    }
-                    if (value.length < 2) {
-                      return 'Nome deve ter pelo menos 2 caracteres';
+                      return 'Por favor, insira seu nome';
                     }
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
-                const Text(
-                  'E-mail',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    hintText: 'Digite seu e-mail',
-                    filled: true,
-                    fillColor: AppColors.inputGray,
+                    labelText: 'E-mail',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor, digite seu e-mail';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Por favor, digite um e-mail válido';
+                    if (value == null || !value.contains('@')) {
+                      return 'Por favor, insira um e-mail válido';
                     }
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Senha',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
                   decoration: InputDecoration(
-                    hintText: 'Digite sua senha',
-                    filled: true,
-                    fillColor: AppColors.inputGray,
+                    labelText: 'Senha',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor, digite sua senha';
-                    }
-                    if (value.length < 6) {
-                      return 'Senha deve ter pelo menos 6 caracteres';
+                    if (value == null || value.length < 6) {
+                      return 'A senha deve ter pelo menos 6 caracteres';
                     }
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Confirmar Senha',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: true,
                   decoration: InputDecoration(
-                    hintText: 'Confirme sua senha',
-                    filled: true,
-                    fillColor: AppColors.inputGray,
+                    labelText: 'Confirmar Senha',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor, confirme sua senha';
-                    }
                     if (value != _passwordController.text) {
                       return 'As senhas não coincidem';
                     }
                     return null;
                   },
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
                     onPressed: _signUp,
+                    child: const Text('Cadastrar', style: TextStyle(fontSize: 18)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.buttonPurple,
+                      backgroundColor: AppColors.secondaryPurple,
                       foregroundColor: AppColors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       elevation: 0,
-                    ),
-                    child: const Text(
-                      'Cadastrar',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 30),
-                Center(
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Cadastro com Google não implementado.'),
-                          ),
-                        );
-                      },
-                      icon: const Icon(
-                        Icons.g_mobiledata,
-                        size: 24,
-                        color: AppColors.white,
-                      ),
-                      label: const Text(
-                        'Continuar com Google',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.blue,
-                        foregroundColor: AppColors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
                     ),
                   ),
                 ),
