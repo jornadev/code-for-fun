@@ -3,8 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../constants/app_colors.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
-// import 'home_screen.dart'; // Removido
-import 'main_navigation_screen.dart'; // Adicionado
+import 'main_navigation_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -45,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            // --- LINHA MODIFICADA ---
+
             MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
           );
         }

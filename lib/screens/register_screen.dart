@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../constants/app_colors.dart';
 import 'login_screen.dart';
-// import 'home_screen.dart'; // Removido
-import 'main_navigation_screen.dart'; // Adicionado
+import 'main_navigation_screen.dart';
+import 'package:code_for_fun/service/user_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -19,6 +19,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final _auth = FirebaseAuth.instance;
+
+  final _userService = UserService();
+  bool _isLoading = false;
+
 
   @override
   void dispose() {
@@ -38,43 +42,55 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+
   Future<void> _signUp() async {
     if (_formKey.currentState!.validate()) {
+      setState(() { _isLoading = true; });
+
       try {
+
         UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-          email: _emailController.text,
-          password: _passwordController.text,
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
         );
 
-        if (userCredential.user != null) {
-          await userCredential.user!.updateDisplayName(_nameController.text);
-          // Recarregue o usuário para garantir que o displayName seja atualizado
-          await userCredential.user!.reload();
+        User? user = userCredential.user;
+        if (user == null) {
+          throw Exception("Erro ao criar usuário, usuário nulo.");
         }
 
+        final String name = _nameController.text.trim();
+
+
+        await user.updateDisplayName(name);
+
+
+        await _userService.createUserDocument(user, name);
+
+
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            // --- LINHA MODIFICADA ---
+          Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
           );
         }
       } on FirebaseAuthException catch (e) {
-        if (e.code == 'weak-password') {
-          _showErrorSnackBar('A senha fornecida é muito fraca.');
-        } else if (e.code == 'email-already-in-use') {
-          _showErrorSnackBar('O e-mail já está em uso por outra conta.');
-        } else {
-          _showErrorSnackBar('Ocorreu um erro: ${e.message}');
-        }
+        _showErrorSnackBar(e.message ?? "Ocorreu um erro de autenticação");
       } catch (e) {
-        _showErrorSnackBar('Ocorreu um erro inesperado.');
+
+        _showErrorSnackBar(e.toString());
+      } finally {
+        if (mounted) {
+          setState(() { _isLoading = false; });
+        }
       }
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
+
+
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       body: SafeArea(
@@ -85,120 +101,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 40),
-                Center(
-                  child: RichText(
-                    text: const TextSpan(
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
-                          Shadow(
-                            offset: Offset(1, 1),
-                            blurRadius: 2,
-                            color: Colors.black26,
-                          ),
-                        ],
-                      ),
-                      children: [
-                        TextSpan(
-                          text: 'Code',
-                          style: TextStyle(color: AppColors.textDark),
-                        ),
-                        TextSpan(
-                          text: '4',
-                          style: TextStyle(color: AppColors.secondaryPurple),
-                        ),
-                        TextSpan(
-                          text: 'Fun',
-                          style: TextStyle(color: AppColors.textDark),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 40),
-                const Text(
-                  'Crie sua conta',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 24),
+
+
+
+
                 TextFormField(
                   controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Nome',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor, insira seu nome';
-                    }
-                    return null;
-                  },
+                  decoration: const InputDecoration(labelText: 'Nome'),
+                  validator: (value) => (value?.isEmpty ?? true) ? 'Campo obrigatório' : null,
                 ),
-                const SizedBox(height: 16),
                 TextFormField(
                   controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: 'E-mail',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || !value.contains('@')) {
-                      return 'Por favor, insira um e-mail válido';
-                    }
-                    return null;
-                  },
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  validator: (value) => (value?.isEmpty ?? true) ? 'Campo obrigatório' : null,
                 ),
-                const SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Senha',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Senha'),
                   validator: (value) {
-                    if (value == null || value.length < 6) {
-                      return 'A senha deve ter pelo menos 6 caracteres';
-                    }
+                    if (value == null || value.isEmpty) return 'Campo obrigatório';
+                    if (value.length < 6) return 'Senha deve ter 6+ caracteres';
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Confirmar Senha',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Confirmar Senha'),
                   validator: (value) {
-                    if (value != _passwordController.text) {
-                      return 'As senhas não coincidem';
-                    }
+                    if (value != _passwordController.text) return 'As senhas não conferem';
                     return null;
                   },
                 ),
+
+
                 const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _signUp,
-                    child: const Text('Cadastrar', style: TextStyle(fontSize: 18)),
+                    onPressed: _isLoading ? null : _signUp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.secondaryPurple,
                       foregroundColor: AppColors.white,
@@ -207,8 +150,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       elevation: 0,
                     ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(
+                      color: AppColors.white,
+                      strokeWidth: 3,
+                    )
+                        : const Text(
+                      'Cadastrar',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
+
+
                 const SizedBox(height: 40),
                 Center(
                   child: RichText(

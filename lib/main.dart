@@ -13,7 +13,6 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // 2. runApp modificado para incluir o Provider
   runApp(
     ChangeNotifierProvider(
       create: (context) => ScoreProvider(),
