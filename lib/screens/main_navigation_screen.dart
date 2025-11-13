@@ -3,6 +3,7 @@ import 'package:code_for_fun/screens/home_screen.dart';
 import 'package:code_for_fun/screens/profile_screen.dart';
 import 'package:code_for_fun/screens/settings_screen.dart';
 import 'package:code_for_fun/constants/app_colors.dart';
+import 'package:code_for_fun/screens/ranking_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -16,16 +17,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   static final List<Widget> _screens = <Widget>[
     const HomeScreen(),
-    const RankingScreenPlaceholder(),
+    const RankingScreen(),
     const ProfileScreen(),
     const SettingsScreen(),
   ];
 
   static final List<PreferredSizeWidget?> _appBars = <PreferredSizeWidget?>[
     null,
-    _buildAppBar('Ranking'),
-    _buildAppBar('Perfil'),
-    _buildAppBar('Ajustes'),
+    null,
+    null,
+    null,
   ];
 
   void _onItemTapped(int index) {
@@ -34,23 +35,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     });
   }
 
-  static PreferredSizeWidget _buildAppBar(String title) {
-    return AppBar(
-      title: Text(
-        title,
-        style: const TextStyle(
-          color: AppColors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      backgroundColor: AppColors.primaryPurple,
-      automaticallyImplyLeading: false,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF0F0F5),
       appBar: _appBars[_selectedIndex],
       body: IndexedStack(
         index: _selectedIndex,
@@ -81,27 +69,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ],
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-      ),
-    );
-  }
-}
-
-class RankingScreenPlaceholder extends StatelessWidget {
-  const RankingScreenPlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.emoji_events_outlined, size: 80, color: Colors.grey),
-          SizedBox(height: 16),
-          Text(
-            'Tela de Ranking em breve!',
-            style: TextStyle(fontSize: 18, color: Colors.grey),
-          ),
-        ],
       ),
     );
   }

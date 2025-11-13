@@ -8,7 +8,6 @@ class UserService {
   Future<void> createUserDocument(User user, String name) async {
     final docRef = _db.collection('users').doc(user.uid);
 
-
     final doc = await docRef.get();
     if (doc.exists) {
       print("Aviso: Documento já existia, pulando criação.");
@@ -16,7 +15,6 @@ class UserService {
     }
 
     try {
-
       await docRef.set({
         'uid': user.uid,
         'email': user.email ?? '',
@@ -31,21 +29,15 @@ class UserService {
     }
   }
 
-
-
-
   Future<int> getUserScore() async {
     final user = _auth.currentUser;
     if (user == null) return 0;
 
     try {
       final doc = await _db.collection('users').doc(user.uid).get();
-
-      if (doc.exists && doc.data() != null) {
+      if (doc.exists) {
         return doc.data()?['score'] ?? 0;
       } else {
-
-        print("Aviso: Documento do usuário não encontrado em getUserScore. (Isso é normal se o usuário acabou de se registrar e a tela de home carregou rápido)");
         return 0;
       }
     } catch (e) {
@@ -53,18 +45,20 @@ class UserService {
       return 0;
     }
   }
+
   Future<void> updateUserScore(int newScore) async {
     final user = _auth.currentUser;
     if (user == null) return;
 
     try {
       final docRef = _db.collection('users').doc(user.uid);
-      await docRef.update({'score': newScore}); // Só atualiza
+      await docRef.update({'score': newScore});
     } catch (e) {
       print("Erro ao ATUALIZAR pontuação: $e");
       throw Exception("Falha ao salvar pontuação: $e");
     }
   }
+
   Future<void> completeLesson(String lessonId) async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -79,20 +73,57 @@ class UserService {
       throw Exception("Falha ao salvar progresso: $e");
     }
   }
+
   Future<List<String>> getCompletedLessons() async {
     final user = _auth.currentUser;
     if (user == null) return [];
 
     try {
       final doc = await _db.collection('users').doc(user.uid).get();
-
-      if (doc.exists && doc.data() != null && doc.data()!.containsKey('completedLessons')) {
-        final data = doc.data()!['completedLessons'] as List<dynamic>;
-        return data.map((id) => id.toString()).toList();
+      if (doc.exists) {
+        final data = doc.data();
+        if (data != null && data.containsKey('completedLessons')) {
+          List<dynamic> completed = data['completedLessons'] ?? [];
+          return completed.map((item) => item.toString()).toList();
+        }
       }
+      return [];
     } catch (e) {
       print("Erro ao buscar lições completas: $e");
+      return [];
     }
-    return [];
+  }
+
+  Future<List<Map<String, dynamic>>> getRanking() async {
+    try {
+      final querySnapshot = await _db
+          .collection('users')
+          .orderBy('score', descending: true)
+          .limit(50)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+    } catch (e) {
+      print("Erro ao buscar ranking: $e");
+      throw Exception("Não foi possível carregar o ranking.");
+    }
+  }
+
+  Future<void> resetUserProgress() async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("Usuário não logado.");
+
+    try {
+      final docRef = _db.collection('users').doc(user.uid);
+      await docRef.update({
+        'score': 0,
+        'completedLessons': [],
+      });
+    } catch (e) {
+      print("Erro ao resetar progresso no Firestore: $e");
+      throw Exception("Falha ao resetar seu progresso no banco de dados.");
+    }
   }
 }

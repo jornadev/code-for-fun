@@ -21,7 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadUserName();
-    Provider.of<ScoreProvider>(context, listen: false).loadUserScore();
+    Provider.of<ScoreProvider>(context, listen: false).loadUserData();
   }
 
   void _loadUserName() {
@@ -39,6 +39,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scoreProvider = context.watch<ScoreProvider>();
+    final Set<String> completedIds = scoreProvider.completedLessonIds.toSet();
+
     return SingleChildScrollView(
       child: Container(
         color: const Color(0xFFF0F0F5),
@@ -46,10 +49,10 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(context, _userName),
-            _buildContinueSection(context),
+            _buildContinueSection(context, completedIds),
             _buildRecommendedSection(context),
             const SizedBox(height: 24),
-            _buildYourTrailsSection(context),
+            _buildYourTrailsSection(context, completedIds),
             const SizedBox(height: 24),
           ],
         ),
@@ -123,12 +126,19 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildContinueSection(BuildContext context) {
+  Widget _buildContinueSection(BuildContext context, Set<String> completedIds) {
     final inProgressTrails = TrailService.getInProgressTrails();
     if (inProgressTrails.isEmpty) {
       return const SizedBox.shrink();
     }
     final firstTrail = inProgressTrails.first;
+
+    final int completedCount = firstTrail.lessons
+        .where((l) => completedIds.contains(l.id))
+        .length;
+    final double progress = (firstTrail.lessons.isEmpty)
+        ? 0.0
+        : (completedCount / firstTrail.lessons.length);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -146,6 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _buildProgressCard(
             context,
             trail: firstTrail,
+            progress: progress,
           ),
           const SizedBox(height: 24),
         ],
@@ -183,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildYourTrailsSection(BuildContext context) {
+  Widget _buildYourTrailsSection(BuildContext context, Set<String> completedIds) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -199,9 +210,20 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 16),
           Column(
             children: TrailService.getRecommendedTrails().map((trail) {
+              final int completedCount = trail.lessons
+                  .where((l) => completedIds.contains(l.id))
+                  .length;
+              final double progress = (trail.lessons.isEmpty)
+                  ? 0.0
+                  : (completedCount / trail.lessons.length);
+
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
-                child: _buildProgressCard(context, trail: trail),
+                child: _buildProgressCard(
+                  context,
+                  trail: trail,
+                  progress: progress,
+                ),
               );
             }).toList(),
           ),
@@ -210,8 +232,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildProgressCard(BuildContext context, {required Trail trail}) {
-    String percentageLabel = '${(trail.progress * 100).toInt()}%';
+  Widget _buildProgressCard(BuildContext context, {required Trail trail, required double progress}) {
+    String percentageLabel = '${(progress * 100).toInt()}%';
 
     return GestureDetector(
       onTap: () {
@@ -270,7 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            _buildProgressBar(trail.progress, percentageLabel),
+            _buildProgressBar(progress, percentageLabel),
           ],
         ),
       ),
@@ -323,19 +345,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Colors.grey[600],
                 fontSize: 12,
               ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.star, color: Colors.amber, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  '4.5',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
             ),
           ],
         ),
