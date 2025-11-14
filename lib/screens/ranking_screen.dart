@@ -37,7 +37,7 @@ class _RankingScreenState extends State<RankingScreen> {
               child: Text(
                 'Erro ao carregar o ranking.\nTente novamente mais tarde.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textLight),
+                style: const TextStyle(color: AppColors.textDark),
               ),
             );
           }
@@ -46,7 +46,7 @@ class _RankingScreenState extends State<RankingScreen> {
             return const Center(
               child: Text(
                 'Ainda não há pontuações no ranking.',
-                style: TextStyle(color: AppColors.textLight),
+                style: TextStyle(color: AppColors.textDark),
               ),
             );
           }
