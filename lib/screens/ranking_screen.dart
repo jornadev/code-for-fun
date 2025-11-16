@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:code_for_fun/service/user_service.dart';
 import 'package:code_for_fun/constants/app_colors.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
@@ -11,25 +11,27 @@ class RankingScreen extends StatefulWidget {
 }
 
 class _RankingScreenState extends State<RankingScreen> {
-  final UserService _userService = UserService();
-  late Future<List<Map<String, dynamic>>> _rankingFuture;
   final String? _currentUserUid = FirebaseAuth.instance.currentUser?.uid;
 
   @override
-  void initState() {
-    super.initState();
-    _rankingFuture = _userService.getRanking();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final textColor =
+        Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textDark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F0F5),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _rankingFuture,
+      // sem backgroundColor fixo, deixa o tema cuidar
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .orderBy('score', descending: true)
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(
+                color: AppColors.blue,
+              ),
+            );
           }
 
           if (snapshot.hasError) {
@@ -37,45 +39,46 @@ class _RankingScreenState extends State<RankingScreen> {
               child: Text(
                 'Erro ao carregar o ranking.\nTente novamente mais tarde.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textDark),
+                style: TextStyle(color: textColor),
               ),
             );
           }
 
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(
               child: Text(
                 'Ainda não há pontuações no ranking.',
-                style: TextStyle(color: AppColors.textDark),
+                style: TextStyle(color: textColor),
               ),
             );
           }
 
-          final rankingList = snapshot.data!;
+          final docs = snapshot.data!.docs;
 
           return ListView(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             children: [
               const SizedBox(height: 60),
-              const Padding(
-                padding: EdgeInsets.only(bottom: 20.0),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20.0),
                 child: Text(
                   'Ranking',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
+                    color: textColor,
                   ),
                 ),
               ),
-              ...List.generate(rankingList.length, (index) {
-                final user = rankingList[index];
-                final bool isCurrentUser = user['uid'] == _currentUserUid;
+              ...List.generate(docs.length, (index) {
+                final data = docs[index].data() as Map<String, dynamic>;
+                final bool isCurrentUser = docs[index].id == _currentUserUid;
 
                 return _buildRankingCard(
+                  context: context,
                   position: index + 1,
-                  name: user['displayName'] ?? 'Usuário Anônimo',
-                  score: user['score'] ?? 0,
+                  name: (data['displayName'] ?? 'Usuário Anônimo') as String,
+                  score: (data['score'] ?? 0) as int,
                   isCurrentUser: isCurrentUser,
                 );
               }),
@@ -88,15 +91,20 @@ class _RankingScreenState extends State<RankingScreen> {
   }
 
   Widget _buildRankingCard({
+    required BuildContext context,
     required int position,
     required String name,
     required int score,
     required bool isCurrentUser,
   }) {
+    final cardColor = Theme.of(context).cardColor;
+    final textColor =
+        Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textDark;
+
     return Card(
       elevation: 2,
       margin: const EdgeInsets.symmetric(vertical: 6),
-      color: isCurrentUser ? Colors.orange.withOpacity(0.1) : AppColors.white,
+      color: isCurrentUser ? Colors.orange.withOpacity(0.1) : cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
@@ -110,7 +118,7 @@ class _RankingScreenState extends State<RankingScreen> {
           name,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: isCurrentUser ? Colors.orange[800] : AppColors.textDark,
+            color: isCurrentUser ? Colors.orange[800] : textColor,
           ),
         ),
         trailing: Text(
@@ -136,7 +144,7 @@ class _RankingScreenState extends State<RankingScreen> {
         break;
       case 2:
         icon = Icons.emoji_events;
-        color = Colors.grey[600]!;
+        color = Colors.grey;
         break;
       case 3:
         icon = Icons.emoji_events;

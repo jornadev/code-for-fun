@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:code_for_fun/screens/home_screen.dart';
 import 'package:code_for_fun/screens/profile_screen.dart';
 import 'package:code_for_fun/screens/settings_screen.dart';
-import 'package:code_for_fun/constants/app_colors.dart';
 import 'package:code_for_fun/screens/ranking_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -37,17 +36,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final Color selectedColor = theme.colorScheme.secondary;
+    final Color unselectedColor =
+        theme.iconTheme.color?.withOpacity(0.5) ?? Colors.grey;
+    final Color navBackground =
+        theme.bottomAppBarTheme.color ??
+            (isDark ? const Color(0xFF121212) : Colors.white);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F0F5),
       appBar: _appBars[_selectedIndex],
       body: IndexedStack(
         index: _selectedIndex,
         children: _screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.deepPurple,
-        unselectedItemColor: Colors.grey[400],
+        backgroundColor: navBackground,
+        selectedItemColor: selectedColor,
+        unselectedItemColor: unselectedColor,
         type: BottomNavigationBarType.fixed,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(

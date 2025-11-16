@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "137290603844",
+    "firebase_url": "https://codeforfunapp-default-rtdb.firebaseio.com",
+    "project_id": "codeforfunapp",
+    "storage_bucket": "codeforfunapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:137290603844:android:b835c7c8dea1231d2c8b11",
+        "android_client_info": {
+          "package_name": "com.jornadev.code_for_fun"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAH_J1e8Ig2f3sjGIFZknTn7coLWNR1L60"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

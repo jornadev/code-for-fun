@@ -1,31 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+
 import 'package:code_for_fun/screens/login_screen.dart';
 import 'package:code_for_fun/constants/app_colors.dart';
-import 'package:provider/provider.dart';
 import 'package:code_for_fun/providers/score_provider.dart';
+import 'package:code_for_fun/providers/theme_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final Color textColor =
+        Theme.of(context).textTheme.bodyLarge?.color ?? Colors.white;
+
     return ListView(
       padding: const EdgeInsets.all(24.0),
       children: [
         const SizedBox(height: 60),
-        const Padding(
-          padding: EdgeInsets.only(bottom: 20.0),
-          child: Text(
-            'Ajustes',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
-            ),
+
+        // Título
+        Text(
+          'Ajustes',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: textColor,
           ),
         ),
-        _buildSectionTitle('Conta'),
+        const SizedBox(height: 20),
+
+        // ---------- Aparência ----------
+        _buildSectionTitle('Aparência', textColor),
+        _buildSettingsTile(
+          context,
+          icon: Icons.brightness_6_outlined,
+          title: themeProvider.isDarkTheme ? 'Modo Claro' : 'Modo Escuro',
+          onTap: () {
+            themeProvider.toggleTheme();
+          },
+        ),
+
+        const SizedBox(height: 10),
+
+        // ---------- Conta ----------
+        _buildSectionTitle('Conta', textColor),
         _buildSettingsTile(
           context,
           icon: Icons.person_outline,
@@ -38,15 +59,21 @@ class SettingsScreen extends StatelessWidget {
           title: 'Mudar Senha',
           onTap: () => _sendPasswordReset(context),
         ),
-        const SizedBox(height: 24),
-        _buildSectionTitle('Mais Informações'),
+
+        const SizedBox(height: 10),
+
+        // ---------- Informações ----------
+        _buildSectionTitle('Mais Informações', textColor),
         _buildSettingsTile(
           context,
           icon: Icons.info_outline,
           title: 'Sobre o App',
           onTap: () => _showAboutDialog(context),
         ),
-        const SizedBox(height: 32),
+
+        const SizedBox(height: 20),
+
+        // ---------- Ações perigosas ----------
         _buildDestructiveTile(
           context,
           icon: Icons.restart_alt,
@@ -66,7 +93,8 @@ class SettingsScreen extends StatelessWidget {
           onTap: () {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Função de excluir conta ainda não implementada.'),
+                content:
+                Text('Função de excluir conta ainda não implementada.'),
                 backgroundColor: AppColors.textLight,
               ),
             );
@@ -76,14 +104,16 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  // ====== WIDGETS AUXILIARES ======
+
+  Widget _buildSectionTitle(String title, Color textColor) {
     return Padding(
-      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0, top: 18),
       child: Text(
         title,
-        style: const TextStyle(
-          color: AppColors.textLight,
-          fontSize: 16,
+        style: TextStyle(
+          color: textColor.withOpacity(0.6),
+          fontSize: 15,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -96,15 +126,23 @@ class SettingsScreen extends StatelessWidget {
         required String title,
         required VoidCallback onTap,
       }) {
+    final Color textColor =
+        Theme.of(context).textTheme.bodyLarge?.color ?? Colors.white;
+
     return Card(
       elevation: 1,
-      shadowColor: AppColors.shadowColor.withOpacity(0.1),
       margin: const EdgeInsets.symmetric(vertical: 6),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         leading: Icon(icon, color: Colors.orange),
-        title: Text(title, style: const TextStyle(color: AppColors.textDark)),
-        trailing: const Icon(Icons.chevron_right, color: AppColors.textLight),
+        title: Text(
+          title,
+          style: TextStyle(color: textColor),
+        ),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: textColor.withOpacity(0.5),
+        ),
         onTap: onTap,
       ),
     );
@@ -118,19 +156,24 @@ class SettingsScreen extends StatelessWidget {
       }) {
     return Card(
       elevation: 0,
-      color: AppColors.red.withOpacity(0.05),
+      color: AppColors.red.withOpacity(0.08),
       margin: const EdgeInsets.symmetric(vertical: 6),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.red.withOpacity(0.2)),
+        side: BorderSide(color: AppColors.red.withOpacity(0.3)),
       ),
       child: ListTile(
         leading: Icon(icon, color: AppColors.red),
-        title: Text(title, style: const TextStyle(color: AppColors.red)),
+        title: Text(
+          title,
+          style: const TextStyle(color: AppColors.red),
+        ),
         onTap: onTap,
       ),
     );
   }
+
+  // ====== FUNÇÕES ======
 
   void _showEditNameDialog(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -163,7 +206,9 @@ class SettingsScreen extends StatelessWidget {
                     Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Nome atualizado! (Pode ser necessário reiniciar o app para ver a mudança)'),
+                        content: Text(
+                          'Nome atualizado! (Pode ser necessário reiniciar o app para ver a mudança)',
+                        ),
                         backgroundColor: Colors.green,
                       ),
                     );
@@ -222,7 +267,9 @@ class SettingsScreen extends StatelessWidget {
       builder: (context) {
         return AlertDialog(
           title: const Text('Sobre o Code for Fun'),
-          content: const Text('Este aplicativo foi desenvolvido para tornar o aprendizado de programação divertido e interativo.\n\nVersão 1.0.0'),
+          content: const Text(
+            'Este aplicativo foi desenvolvido para tornar o aprendizado de programação divertido e interativo.\n\nVersão 1.0.0',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -240,14 +287,18 @@ class SettingsScreen extends StatelessWidget {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Resetar Progresso?'),
-          content: const Text('Tem certeza?\nTodo o seu progresso (pontos e lições completas) será permanentemente apagado e zerado.'),
+          content: const Text(
+            'Tem certeza?\nTodo o seu progresso (pontos e lições completas) será permanentemente apagado e zerado.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.red,
+              ),
               onPressed: () async {
                 Navigator.of(dialogContext).pop();
                 try {
@@ -269,7 +320,10 @@ class SettingsScreen extends StatelessWidget {
                   );
                 }
               },
-              child: const Text('Resetar', style: TextStyle(color: AppColors.white)),
+              child: const Text(
+                'Resetar',
+                style: TextStyle(color: AppColors.white),
+              ),
             ),
           ],
         );
