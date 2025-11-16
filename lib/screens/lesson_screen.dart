@@ -111,27 +111,24 @@ class _LessonScreenState extends State<LessonScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final textColor =
+        Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textDark;
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundColor,
-        elevation: 0,
-        iconTheme: const IconThemeData(
-          color: AppColors.textDark,
-        ),
         title: Text(
           widget.lesson.title,
-          style: const TextStyle(
-            color: AppColors.textDark,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(context).appBarTheme.titleTextStyle ??
+              TextStyle(
+                color: textColor,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
         ),
         centerTitle: false,
       ),
       body: Column(
         children: [
-          // Barra de progresso no estilo novo (azul / cinza)
           LinearProgressIndicator(
             value: (_currentQuestionIndex + 1) /
                 widget.lesson.questions.length,
@@ -147,24 +144,24 @@ class _LessonScreenState extends State<LessonScreen> {
                 children: [
                   Text(
                     'Pergunta ${_currentQuestionIndex + 1} de ${widget.lesson.questions.length}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
-                      color: AppColors.textLight,
+                      color: textColor.withOpacity(0.7),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     _currentQuestion.text,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
+                      color: textColor,
                     ),
                   ),
                   const SizedBox(height: 32),
-                  ..._currentQuestion.answers.map((answer) {
-                    return _buildAnswerOption(answer);
-                  }).toList(),
+                  ..._currentQuestion.answers
+                      .map((answer) => _buildAnswerOption(answer))
+                      .toList(),
                   const SizedBox(height: 40),
                   if (!_isAnswerChecked)
                     SizedBox(
@@ -205,6 +202,9 @@ class _LessonScreenState extends State<LessonScreen> {
     Color? textColor;
     Color borderColor = Colors.transparent;
 
+    final defaultTextColor =
+        Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textDark;
+
     if (_isAnswerChecked) {
       if (answer.isCorrect) {
         tileColor = const Color(0xFF28A745).withOpacity(0.1);
@@ -221,8 +221,8 @@ class _LessonScreenState extends State<LessonScreen> {
       textColor = AppColors.blue;
       borderColor = AppColors.blue;
     } else {
-      tileColor = AppColors.lightGray;
-      textColor = AppColors.textDark;
+      tileColor = Theme.of(context).cardColor;
+      textColor = defaultTextColor;
     }
 
     return Card(
@@ -269,7 +269,6 @@ class _LessonScreenState extends State<LessonScreen> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
-            spreadRadius: 0,
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),

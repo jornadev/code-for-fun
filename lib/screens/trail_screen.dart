@@ -76,31 +76,23 @@ class _TrailScreenState extends State<TrailScreen> {
   }
 
   @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final textColor =
+        Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textDark;
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundColor,
-        elevation: 0,
-        iconTheme: const IconThemeData(
-          color: AppColors.textDark,
-        ),
         title: Text(
           widget.trail.title,
-          style: const TextStyle(
-            color: AppColors.textDark,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(context).appBarTheme.titleTextStyle ??
+              TextStyle(
+                color: textColor,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
         ),
         centerTitle: false,
       ),
-
-      backgroundColor: AppColors.backgroundColor,
       body: _isLoading
           ? const Center(
         child: CircularProgressIndicator(
@@ -116,13 +108,18 @@ class _TrailScreenState extends State<TrailScreen> {
           final bool isCompleted = _lessonCompletionStatus[index];
           final bool isCurrent = (index == _unlockedLessonIndex);
           final bool isLocked = (index > _unlockedLessonIndex);
-          final bool isUnlocked = (isCompleted || isCurrent) && !isLocked;
+          final bool isUnlocked =
+              (isCompleted || isCurrent) && !isLocked;
 
           return _buildLessonCard(
+            context: context,
             lesson: lesson,
             isCompleted: isCompleted,
             isCurrent: isCurrent,
             isUnlocked: isUnlocked,
+            onTap: isUnlocked
+                ? () => _navigateToLesson(context, lesson)
+                : null,
           );
         },
       ),
@@ -130,10 +127,12 @@ class _TrailScreenState extends State<TrailScreen> {
   }
 
   Widget _buildLessonCard({
+    required BuildContext context,
     required Lesson lesson,
     required bool isCompleted,
     required bool isCurrent,
     required bool isUnlocked,
+    VoidCallback? onTap,
   }) {
     IconData iconData;
     Color iconColor;
@@ -141,22 +140,22 @@ class _TrailScreenState extends State<TrailScreen> {
     Color titleColor;
     Color borderColor;
 
+    final defaultTextColor =
+        Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textDark;
+
     if (isCompleted) {
-      // Concluído: ícone azul, borda azul
       iconData = Icons.check;
       iconColor = AppColors.white;
       iconBackgroundColor = AppColors.blue;
-      titleColor = AppColors.textDark;
+      titleColor = defaultTextColor;
       borderColor = AppColors.blue.withOpacity(0.4);
     } else if (isCurrent && isUnlocked) {
-      // Módulo atual desbloqueado
       iconData = Icons.play_arrow_rounded;
-      iconColor = AppColors.textDark;
+      iconColor = defaultTextColor;
       iconBackgroundColor = AppColors.inputGray;
-      titleColor = AppColors.textDark;
+      titleColor = defaultTextColor;
       borderColor = AppColors.inputGray;
     } else {
-      // Bloqueado
       iconData = Icons.lock_rounded;
       iconColor = AppColors.textLight;
       iconBackgroundColor = AppColors.inputGray.withOpacity(0.6);
@@ -167,12 +166,12 @@ class _TrailScreenState extends State<TrailScreen> {
     return Opacity(
       opacity: isUnlocked ? 1.0 : 0.7,
       child: InkWell(
-        onTap: isUnlocked ? () => _navigateToLesson(context, lesson) : null,
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 8.0),
           decoration: BoxDecoration(
-            color: AppColors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: borderColor,
@@ -213,9 +212,9 @@ class _TrailScreenState extends State<TrailScreen> {
                 ),
               ),
               if (isUnlocked)
-                const Icon(
+                Icon(
                   Icons.chevron_right_rounded,
-                  color: AppColors.textLight,
+                  color: defaultTextColor.withOpacity(0.5),
                 ),
             ],
           ),

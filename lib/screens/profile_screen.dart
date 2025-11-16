@@ -17,7 +17,8 @@ class ProfileScreen extends StatelessWidget {
     final String userEmail = user?.email ?? 'email@nao-encontrado.com';
 
     final scoreProvider = context.watch<ScoreProvider>();
-    final Set<String> completedLessonIds = scoreProvider.completedLessonIds.toSet();
+    final Set<String> completedLessonIds =
+    scoreProvider.completedLessonIds.toSet();
 
     final List<Trail> allTrails = TrailService.getRecommendedTrails();
 
@@ -32,7 +33,6 @@ class ProfileScreen extends StatelessWidget {
 
       return progress > 0 && progress < 1;
     }).toList();
-
 
     final int score = scoreProvider.score;
     String userLevel;
@@ -52,18 +52,21 @@ class ProfileScreen extends StatelessWidget {
       levelIcon = Icons.workspace_premium_outlined;
     }
 
+    final textColor =
+        Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textDark;
+
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       children: [
         const SizedBox(height: 60),
-        const Padding(
-          padding: EdgeInsets.only(bottom: 20.0),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 20.0),
           child: Text(
             'Meu Perfil',
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
+              color: textColor,
             ),
           ),
         ),
@@ -80,29 +83,39 @@ class ProfileScreen extends StatelessWidget {
         ),
         const SizedBox(height: 40),
 
+        // Nome
         _buildInfoTile(
+          context: context,
           icon: Icons.person_outlined,
           label: 'Nome',
           value: userName,
         ),
 
+        // Email
         _buildInfoTile(
+          context: context,
           icon: Icons.email_outlined,
           label: 'E-mail',
           value: userEmail,
         ),
 
+        // Pontuação total
         Consumer<ScoreProvider>(
           builder: (context, provider, child) {
             return _buildInfoTile(
+              context: context,
               icon: Icons.star_outlined,
               label: 'Pontuação Total',
-              value: provider.isLoading ? 'Carregando...' : provider.score.toString(),
+              value: provider.isLoading
+                  ? 'Carregando...'
+                  : provider.score.toString(),
             );
           },
         ),
 
+        // Nível atual
         _buildInfoTile(
+          context: context,
           icon: levelIcon,
           label: 'Nível Atual',
           value: scoreProvider.isLoading ? 'Calculando...' : userLevel,
@@ -115,26 +128,35 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInProgressSection(BuildContext context, List<Trail> inProgressTrails) {
+  // -------------------------------------------------------------------------
+  /// Cursos em andamento
+  Widget _buildInProgressSection(
+      BuildContext context, List<Trail> inProgressTrails) {
+    final textColor =
+        Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textDark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Cursos em Andamento',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: AppColors.textDark,
+            color: textColor,
           ),
         ),
         const SizedBox(height: 16),
         if (inProgressTrails.isEmpty)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Center(
               child: Text(
                 'Nenhum curso em andamento.',
-                style: TextStyle(color: AppColors.textLight, fontSize: 16),
+                style: TextStyle(
+                  color: textColor.withOpacity(0.6),
+                  fontSize: 16,
+                ),
               ),
             ),
           )
@@ -146,15 +168,23 @@ class ProfileScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final trail = inProgressTrails[index];
               final int completedCount = trail.lessons
-                  .where((l) => context.read<ScoreProvider>().completedLessonIds.contains(l.id))
+                  .where((l) => context
+                  .read<ScoreProvider>()
+                  .completedLessonIds
+                  .contains(l.id))
                   .length;
-              final double progress = (completedCount > 0 && trail.lessons.isNotEmpty)
+              final double progress =
+              (completedCount > 0 && trail.lessons.isNotEmpty)
                   ? (completedCount / trail.lessons.length)
                   : 0.0;
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
-                child: _buildProgressCard(context, trail: trail, progress: progress),
+                child: _buildProgressCard(
+                  context,
+                  trail: trail,
+                  progress: progress,
+                ),
               );
             },
           ),
@@ -162,19 +192,30 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressCard(BuildContext context, {required Trail trail, required double progress}) {
+  Widget _buildProgressCard(
+      BuildContext context, {
+        required Trail trail,
+        required double progress,
+      }) {
     String percentageLabel = '${(progress * 100).toInt()}%';
+
+    final theme = Theme.of(context);
+    final textColor =
+        theme.textTheme.bodyLarge?.color ?? AppColors.textDark;
+    final isDark = theme.brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => TrailScreen(trail: trail)),
+          MaterialPageRoute(
+            builder: (context) => TrailScreen(trail: trail),
+          ),
         );
       },
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.cardColor,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -190,10 +231,14 @@ class ProfileScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: trail.iconColor.withOpacity(0.1),
+                    color: trail.iconColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(trail.icon, color: trail.iconColor, size: 28),
+                  child: Icon(
+                    trail.icon,
+                    color: trail.iconColor,
+                    size: 28,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -202,65 +247,74 @@ class ProfileScreen extends StatelessWidget {
                     children: [
                       Text(
                         trail.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: textColor,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '${trail.lessons.length} Lições • ${trail.level}',
                         style: TextStyle(
-                          color: Colors.grey[600],
+                          color: textColor.withOpacity(0.7),
                           fontSize: 12,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right, color: Colors.grey[400]),
+                Icon(
+                  Icons.chevron_right,
+                  color: textColor.withOpacity(0.5),
+                ),
               ],
             ),
             const SizedBox(height: 16),
-            _buildProgressBar(progress, percentageLabel),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor:
+                    isDark ? Colors.grey[800] : Colors.grey[300],
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Colors.orange,
+                    ),
+                    minHeight: 16,
+                  ),
+                ),
+                Positioned.fill(
+                  child: Center(
+                    child: Text(
+                      percentageLabel,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildProgressBar(double progress, String percentageLabel) {
-    return Stack(
-      children: [
-        LinearProgressIndicator(
-          value: progress,
-          backgroundColor: Colors.grey[300],
-          valueColor: const AlwaysStoppedAnimation<Color>(Colors.orange),
-          borderRadius: BorderRadius.circular(10),
-          minHeight: 16,
-        ),
-        Positioned.fill(
-          child: Center(
-            child: Text(
-              percentageLabel,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-
   Widget _buildInfoTile({
+    required BuildContext context,
     required IconData icon,
     required String label,
-    required String value
+    required String value,
   }) {
+    final theme = Theme.of(context);
+    final textColor =
+        theme.textTheme.bodyLarge?.color ?? AppColors.textDark;
+
     return Card(
       elevation: 2,
       shadowColor: AppColors.shadowColor.withOpacity(0.1),
@@ -272,23 +326,28 @@ class ProfileScreen extends StatelessWidget {
           children: [
             Icon(icon, color: Colors.orange, size: 28),
             const SizedBox(width: 20),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(color: AppColors.textLight, fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                      color: AppColors.textDark,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: textColor.withOpacity(0.6),
+                      fontSize: 14,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
