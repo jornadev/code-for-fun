@@ -5,9 +5,6 @@ import 'package:code_for_fun/screens/lesson_screen.dart';
 import 'package:code_for_fun/constants/app_colors.dart';
 import 'package:code_for_fun/service/user_service.dart';
 
-
-
-
 class TrailScreen extends StatefulWidget {
   final Trail trail;
 
@@ -17,15 +14,11 @@ class TrailScreen extends StatefulWidget {
   State<TrailScreen> createState() => _TrailScreenState();
 }
 
-
 class _TrailScreenState extends State<TrailScreen> {
-
   late List<bool> _lessonCompletionStatus;
   late int _unlockedLessonIndex;
   bool _isLoading = true;
   final UserService _userService = UserService();
-
-
 
   @override
   void initState() {
@@ -35,7 +28,6 @@ class _TrailScreenState extends State<TrailScreen> {
     _unlockedLessonIndex = 0;
     _loadTrailState();
   }
-
 
   Future<void> _loadTrailState() async {
     setState(() {
@@ -70,7 +62,6 @@ class _TrailScreenState extends State<TrailScreen> {
     });
   }
 
-
   void _navigateToLesson(BuildContext context, Lesson lesson) async {
     final bool? didCompleteModule = await Navigator.push<bool>(
       context,
@@ -86,7 +77,6 @@ class _TrailScreenState extends State<TrailScreen> {
 
   @override
   void dispose() {
-
     super.dispose();
   }
 
@@ -94,29 +84,39 @@ class _TrailScreenState extends State<TrailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.trail.title),
-        backgroundColor: AppColors.primaryPurple,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.backgroundColor,
+        elevation: 0,
+        iconTheme: const IconThemeData(
+          color: AppColors.textDark,
+        ),
+        title: Text(
+          widget.trail.title,
+          style: const TextStyle(
+            color: AppColors.textDark,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: false,
       ),
 
-      backgroundColor: AppColors.lightGray,
+      backgroundColor: AppColors.backgroundColor,
       body: _isLoading
           ? const Center(
-          child: CircularProgressIndicator(
-            color: AppColors.primaryPurple,
-          ))
-
+        child: CircularProgressIndicator(
+          color: AppColors.blue,
+        ),
+      )
           : ListView.builder(
         padding: const EdgeInsets.all(16.0),
         itemCount: widget.trail.lessons.length,
         itemBuilder: (context, index) {
           final lesson = widget.trail.lessons[index];
 
-
           final bool isCompleted = _lessonCompletionStatus[index];
           final bool isCurrent = (index == _unlockedLessonIndex);
           final bool isLocked = (index > _unlockedLessonIndex);
-          final bool isUnlocked = (isCompleted || isCurrent);
+          final bool isUnlocked = (isCompleted || isCurrent) && !isLocked;
 
           return _buildLessonCard(
             lesson: lesson,
@@ -129,7 +129,6 @@ class _TrailScreenState extends State<TrailScreen> {
     );
   }
 
-
   Widget _buildLessonCard({
     required Lesson lesson,
     required bool isCompleted,
@@ -139,47 +138,89 @@ class _TrailScreenState extends State<TrailScreen> {
     IconData iconData;
     Color iconColor;
     Color iconBackgroundColor;
+    Color titleColor;
+    Color borderColor;
 
     if (isCompleted) {
+      // Concluído: ícone azul, borda azul
       iconData = Icons.check;
       iconColor = AppColors.white;
-      iconBackgroundColor = AppColors.primaryPurple;
-    } else if (isCurrent) {
-      iconData = Icons.lock_open;
-      iconColor = AppColors.white;
-      iconBackgroundColor = AppColors.secondaryPurple;
-    } else {
-
-      iconData = Icons.lock;
-      iconColor = AppColors.textLight;
+      iconBackgroundColor = AppColors.blue;
+      titleColor = AppColors.textDark;
+      borderColor = AppColors.blue.withOpacity(0.4);
+    } else if (isCurrent && isUnlocked) {
+      // Módulo atual desbloqueado
+      iconData = Icons.play_arrow_rounded;
+      iconColor = AppColors.textDark;
       iconBackgroundColor = AppColors.inputGray;
+      titleColor = AppColors.textDark;
+      borderColor = AppColors.inputGray;
+    } else {
+      // Bloqueado
+      iconData = Icons.lock_rounded;
+      iconColor = AppColors.textLight;
+      iconBackgroundColor = AppColors.inputGray.withOpacity(0.6);
+      titleColor = AppColors.textLight;
+      borderColor = Colors.transparent;
     }
 
-
-    return Card(
-      elevation: isUnlocked ? 2 : 0,
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        enabled: isUnlocked,
+    return Opacity(
+      opacity: isUnlocked ? 1.0 : 0.7,
+      child: InkWell(
         onTap: isUnlocked ? () => _navigateToLesson(context, lesson) : null,
-
-        leading: CircleAvatar(
-          radius: 24,
-          backgroundColor: iconBackgroundColor,
-          child: Icon(iconData, color: iconColor),
-        ),
-
-        title: Text(
-          lesson.title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 8.0),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: borderColor,
+              width: borderColor == Colors.transparent ? 0.6 : 1.2,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.shadowColor,
+                blurRadius: 8,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: iconBackgroundColor,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  iconData,
+                  color: iconColor,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  lesson.title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 16,
+                    color: titleColor,
+                  ),
+                ),
+              ),
+              if (isUnlocked)
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textLight,
+                ),
+            ],
           ),
         ),
-
-        trailing: isUnlocked ? const Icon(Icons.chevron_right) : null,
       ),
     );
   }
 }
-

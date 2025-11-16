@@ -12,7 +12,6 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
   runApp(
     ChangeNotifierProvider(
       create: (context) => ScoreProvider(),
