@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:code_for_fun/model/lesson_model.dart';
 import 'package:provider/provider.dart';
 import 'package:code_for_fun/providers/score_provider.dart';
-import 'package:code_for_fun/service/user_service.dart';
 import 'package:code_for_fun/constants/app_colors.dart';
 
 class LessonScreen extends StatefulWidget {
@@ -78,19 +77,21 @@ class _LessonScreenState extends State<LessonScreen> {
           _isFinishing = true;
         });
 
-        await Provider.of<ScoreProvider>(context, listen: false).incrementScore();
-        await Provider.of<ScoreProvider>(context, listen: false).completeLesson(widget.lesson.id);
+        await Provider.of<ScoreProvider>(context, listen: false)
+            .incrementScore();
+        await Provider.of<ScoreProvider>(context, listen: false)
+            .completeLesson(widget.lesson.id);
 
         if (mounted) {
           Navigator.of(context).pop(true);
         }
-
       } else {
         setState(() {
           _isFinishing = true;
         });
 
-        await Provider.of<ScoreProvider>(context, listen: false).incrementScore();
+        await Provider.of<ScoreProvider>(context, listen: false)
+            .incrementScore();
 
         _nextQuestion();
 
@@ -108,24 +109,35 @@ class _LessonScreenState extends State<LessonScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
-        title: Text(widget.lesson.title),
-        backgroundColor: AppColors.primaryPurple,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.backgroundColor,
         elevation: 0,
+        iconTheme: const IconThemeData(
+          color: AppColors.textDark,
+        ),
+        title: Text(
+          widget.lesson.title,
+          style: const TextStyle(
+            color: AppColors.textDark,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: false,
       ),
       body: Column(
         children: [
+          // Barra de progresso no estilo novo (azul / cinza)
           LinearProgressIndicator(
-            value: (_currentQuestionIndex + 1) / widget.lesson.questions.length,
+            value: (_currentQuestionIndex + 1) /
+                widget.lesson.questions.length,
             backgroundColor: AppColors.inputGray,
             valueColor:
-            const AlwaysStoppedAnimation<Color>(AppColors.secondaryPurple),
+            const AlwaysStoppedAnimation<Color>(AppColors.blue),
           ),
           Expanded(
             child: SingleChildScrollView(
@@ -152,10 +164,8 @@ class _LessonScreenState extends State<LessonScreen> {
                   const SizedBox(height: 32),
                   ..._currentQuestion.answers.map((answer) {
                     return _buildAnswerOption(answer);
-                  }),
-
+                  }).toList(),
                   const SizedBox(height: 40),
-
                   if (!_isAnswerChecked)
                     SizedBox(
                       width: double.infinity,
@@ -163,7 +173,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       child: ElevatedButton(
                         onPressed: _checkAnswer,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.secondaryPurple,
+                          backgroundColor: AppColors.blue,
                           foregroundColor: AppColors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -193,6 +203,7 @@ class _LessonScreenState extends State<LessonScreen> {
     bool isSelected = _selectedAnswer == answer;
     Color? tileColor;
     Color? textColor;
+    Color borderColor = Colors.transparent;
 
     if (_isAnswerChecked) {
       if (answer.isCorrect) {
@@ -206,8 +217,9 @@ class _LessonScreenState extends State<LessonScreen> {
         textColor = AppColors.textLight;
       }
     } else if (isSelected) {
-      tileColor = AppColors.secondaryPurple.withOpacity(0.1);
-      textColor = AppColors.secondaryPurple;
+      tileColor = AppColors.blue.withOpacity(0.08);
+      textColor = AppColors.blue;
+      borderColor = AppColors.blue;
     } else {
       tileColor = AppColors.lightGray;
       textColor = AppColors.textDark;
@@ -220,8 +232,8 @@ class _LessonScreenState extends State<LessonScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: isSelected ? AppColors.secondaryPurple : Colors.transparent,
-          width: 2,
+          color: borderColor,
+          width: borderColor == Colors.transparent ? 1 : 2,
         ),
       ),
       child: ListTile(
@@ -283,7 +295,8 @@ class _LessonScreenState extends State<LessonScreen> {
               backgroundColor: Colors.white,
               foregroundColor:
               isCorrect ? const Color(0xFF28A745) : const Color(0xFFDC3545),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
               ),
