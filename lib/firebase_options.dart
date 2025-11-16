@@ -52,6 +52,7 @@ class DefaultFirebaseOptions {
     appId: '1:137290603844:android:b835c7c8dea1231d2c8b11',
     messagingSenderId: '137290603844',
     projectId: 'codeforfunapp',
+    databaseURL: 'https://codeforfunapp-default-rtdb.firebaseio.com',
     storageBucket: 'codeforfunapp.firebasestorage.app',
   );
 
@@ -60,7 +61,9 @@ class DefaultFirebaseOptions {
     appId: '1:137290603844:ios:7898a1682cbd67472c8b11',
     messagingSenderId: '137290603844',
     projectId: 'codeforfunapp',
+    databaseURL: 'https://codeforfunapp-default-rtdb.firebaseio.com',
     storageBucket: 'codeforfunapp.firebasestorage.app',
     iosBundleId: 'com.jornadev.codeForFun',
   );
+
 }

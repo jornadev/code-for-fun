@@ -40,5 +40,19 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+
+    # ### INÍCIO DA CORREÇÃO PARA O FIREBASE PERFORMANCE ###
+    # Remove o script de build problemático (flag -G) apenas para Debug
+    if target.name == 'FirebasePerformance'
+      target.build_configurations.each do |config|
+        if config.name == 'Debug'
+          target.build_phases.reject! do |phase|
+            phase.name != nil && phase.name.include?('[FirebasePerformance] Run Script')
+          end
+        end
+      end
+    end
+    # ### FIM DA CORREÇÃO ###
+
   end
 end

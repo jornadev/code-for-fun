@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../constants/app_colors.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
@@ -41,10 +42,10 @@ class _LoginScreenState extends State<LoginScreen> {
           email: _emailController.text,
           password: _passwordController.text,
         );
+
         if (mounted) {
           Navigator.pushReplacement(
             context,
-
             MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
           );
         }
@@ -55,6 +56,32 @@ class _LoginScreenState extends State<LoginScreen> {
           _showErrorSnackBar('Ocorreu um erro no login. Tente novamente.');
         }
       }
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return;
+
+      final GoogleSignInAuthentication googleAuth =
+      await googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      await FirebaseAuth.instance.signInWithCredential(credential);
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+        );
+      }
+    } catch (e) {
+      _showErrorSnackBar("Erro ao fazer login com Google.");
     }
   }
 
@@ -120,6 +147,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 50),
+
+                // CAMPO EMAIL
                 const Text(
                   'E-mail',
                   style: TextStyle(
@@ -155,7 +184,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
+
                 const SizedBox(height: 16),
+
+                // CAMPO SENHA
                 const Text(
                   'Senha',
                   style: TextStyle(
@@ -188,12 +220,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
+
                 const SizedBox(height: 12),
+
                 Align(
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
                     onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const ForgotPasswordScreen()),
                     ),
                     child: const Text(
                       'Esqueceu sua senha?',
@@ -205,7 +240,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 40),
+
+                // BOTÃO LOGIN EMAIL
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -228,43 +266,41 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 30),
-                Center(
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Login com Google não implementado.'),
-                          ),
-                        );
-                      },
-                      icon: const Icon(
-                        Icons.g_mobiledata,
-                        size: 24,
-                        color: AppColors.white,
+
+                // BOTÃO GOOGLE
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    onPressed: _signInWithGoogle,
+                    icon: const Icon(
+                      Icons.g_mobiledata,
+                      size: 24,
+                      color: AppColors.white,
+                    ),
+                    label: const Text(
+                      'Continuar com Google',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
                       ),
-                      label: const Text(
-                        'Continuar com Google',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.blue,
+                      foregroundColor: AppColors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.blue,
-                        foregroundColor: AppColors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
+                      elevation: 0,
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 40),
+
+                // RODAPÉ CADASTRAR
                 Center(
                   child: RichText(
                     text: TextSpan(
@@ -277,7 +313,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         WidgetSpan(
                           child: GestureDetector(
                             onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                  const RegisterScreen()),
                             ),
                             child: const Text(
                               'Cadastre-se',
