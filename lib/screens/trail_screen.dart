@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import 'package:code_for_fun/model/trail_model.dart';
 import 'package:code_for_fun/model/lesson_model.dart';
-import 'package:code_for_fun/screens/lesson_screen.dart';
 import 'package:code_for_fun/constants/app_colors.dart';
 import 'package:code_for_fun/service/user_service.dart';
+import 'package:code_for_fun/service/trail_service.dart';
+
+import 'lesson_screen.dart';
 
 class TrailScreen extends StatefulWidget {
   final Trail trail;
@@ -15,51 +18,26 @@ class TrailScreen extends StatefulWidget {
 }
 
 class _TrailScreenState extends State<TrailScreen> {
-  late List<bool> _lessonCompletionStatus;
-  late int _unlockedLessonIndex;
-  bool _isLoading = true;
   final UserService _userService = UserService();
+  final TrailService _trailService = TrailService();
+
+  Set<String> _completedLessonIds = {};
+  bool _isLoadingUserData = true;
 
   @override
   void initState() {
     super.initState();
-    _lessonCompletionStatus =
-        List.filled(widget.trail.lessons.length, false);
-    _unlockedLessonIndex = 0;
-    _loadTrailState();
+    _loadUserData();
   }
 
-  Future<void> _loadTrailState() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    final completedLessonIds = await _userService.getCompletedLessons();
-    List<bool> newStatus = [];
-    int newUnlockedIndex = 0;
-    bool foundFirstUnlocked = false;
-
-    for (int i = 0; i < widget.trail.lessons.length; i++) {
-      final lessonId = widget.trail.lessons[i].id;
-      final bool isCompleted = completedLessonIds.contains(lessonId);
-
-      newStatus.add(isCompleted);
-
-      if (!isCompleted && !foundFirstUnlocked) {
-        newUnlockedIndex = i;
-        foundFirstUnlocked = true;
-      }
+  Future<void> _loadUserData() async {
+    final completedList = await _userService.getCompletedLessons();
+    if (mounted) {
+      setState(() {
+        _completedLessonIds = completedList.toSet();
+        _isLoadingUserData = false;
+      });
     }
-
-    if (!foundFirstUnlocked && newStatus.isNotEmpty) {
-      newUnlockedIndex = newStatus.length;
-    }
-
-    setState(() {
-      _lessonCompletionStatus = newStatus;
-      _unlockedLessonIndex = newUnlockedIndex;
-      _isLoading = false;
-    });
   }
 
   void _navigateToLesson(BuildContext context, Lesson lesson) async {
@@ -71,153 +49,323 @@ class _TrailScreenState extends State<TrailScreen> {
     );
 
     if (didCompleteModule == true) {
-      _loadTrailState();
+      _loadUserData();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final textColor =
-        Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textDark;
+    final theme = Theme.of(context);
+    final backgroundColor = theme.scaffoldBackgroundColor;
 
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
+        backgroundColor: backgroundColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.close, color: theme.iconTheme.color),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(
-          widget.trail.title,
-          style: Theme.of(context).appBarTheme.titleTextStyle ??
-              TextStyle(
-                color: textColor,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
+          widget.trail.title.toUpperCase(),
+          style: TextStyle(
+            color: theme.textTheme.bodyLarge?.color?.withOpacity(0.7),
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
         ),
-        centerTitle: false,
+        centerTitle: true,
       ),
-      body: _isLoading
-          ? const Center(
-        child: CircularProgressIndicator(
-          color: AppColors.blue,
-        ),
-      )
-          : ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: widget.trail.lessons.length,
-        itemBuilder: (context, index) {
-          final lesson = widget.trail.lessons[index];
+      body: _isLoadingUserData
+          ? const Center(child: CircularProgressIndicator(color: Colors.purple)) // Loading roxo
+          : StreamBuilder<List<Lesson>>(
+        stream: _trailService.getLessons(widget.trail.id),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Colors.purple));
+          }
 
-          final bool isCompleted = _lessonCompletionStatus[index];
-          final bool isCurrent = (index == _unlockedLessonIndex);
-          final bool isLocked = (index > _unlockedLessonIndex);
-          final bool isUnlocked =
-              (isCompleted || isCurrent) && !isLocked;
+          final lessons = snapshot.data ?? [];
 
-          return _buildLessonCard(
-            context: context,
-            lesson: lesson,
-            isCompleted: isCompleted,
-            isCurrent: isCurrent,
-            isUnlocked: isUnlocked,
-            onTap: isUnlocked
-                ? () => _navigateToLesson(context, lesson)
-                : null,
+          if (lessons.isEmpty) {
+            return const Center(child: Text('Em breve novas aulas!'));
+          }
+
+          int unlockedIndex = 0;
+          for (int i = 0; i < lessons.length; i++) {
+            if (!_completedLessonIds.contains(lessons[i].id)) {
+              unlockedIndex = i;
+              break;
+            }
+            if (i == lessons.length - 1) unlockedIndex = lessons.length;
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.only(top: 20, bottom: 60),
+            itemCount: lessons.length,
+            itemBuilder: (context, index) {
+              final lesson = lessons[index];
+
+              final bool isCompleted = _completedLessonIds.contains(lesson.id);
+              final bool isCurrent = (index == unlockedIndex);
+              final bool isLocked = index > unlockedIndex;
+
+              return _buildPathNode(
+                context,
+                index,
+                lessons.length,
+                lesson,
+                isCompleted,
+                isCurrent,
+                isLocked,
+              );
+            },
           );
         },
       ),
     );
   }
 
-  Widget _buildLessonCard({
-    required BuildContext context,
-    required Lesson lesson,
-    required bool isCompleted,
-    required bool isCurrent,
-    required bool isUnlocked,
-    VoidCallback? onTap,
-  }) {
-    IconData iconData;
-    Color iconColor;
-    Color iconBackgroundColor;
-    Color titleColor;
-    Color borderColor;
+  Widget _buildPathNode(
+      BuildContext context,
+      int index,
+      int totalLength,
+      Lesson lesson,
+      bool isCompleted,
+      bool isCurrent,
+      bool isLocked,
+      ) {
+    final double xOffset = math.sin(index * 2.5) * 80.0;
 
-    final defaultTextColor =
-        Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textDark;
+    // --- PALETA DE CORES ROXA ---
+    Color circleColor;
+    Color shadowColor;
+    Color iconColor;
+    IconData iconData;
+    double buttonSize = 70.0;
 
     if (isCompleted) {
-      iconData = Icons.check;
-      iconColor = AppColors.white;
-      iconBackgroundColor = AppColors.blue;
-      titleColor = defaultTextColor;
-      borderColor = AppColors.blue.withOpacity(0.4);
-    } else if (isCurrent && isUnlocked) {
+      // Roxo Escuro / Conquistado
+      circleColor = const Color(0xFF8E24AA); // Roxo Médio (Purple 600)
+      shadowColor = const Color(0xFF4A148C); // Roxo Bem Escuro (Purple 900)
+      iconColor = Colors.amberAccent; // Estrela Dourada para contraste
+      iconData = Icons.star_rounded;
+    } else if (isCurrent) {
+      // Roxo Vibrante / Ação
+      circleColor = const Color(0xFFE040FB); // Roxo Neon (PurpleAccent 100/200)
+      shadowColor = const Color(0xFFAA00FF); // Roxo Forte (PurpleAccent 700)
+      iconColor = Colors.white;
       iconData = Icons.play_arrow_rounded;
-      iconColor = defaultTextColor;
-      iconBackgroundColor = AppColors.inputGray;
-      titleColor = defaultTextColor;
-      borderColor = AppColors.inputGray;
+      buttonSize = 85.0; // Um pouco maior para destaque
     } else {
-      iconData = Icons.lock_rounded;
-      iconColor = AppColors.textLight;
-      iconBackgroundColor = AppColors.inputGray.withOpacity(0.6);
-      titleColor = AppColors.textLight;
-      borderColor = Colors.transparent;
+      // Bloqueado (Mantém cinza para não poluir)
+      circleColor = Colors.grey[300]!;
+      shadowColor = Colors.grey[400]!;
+      iconColor = Colors.grey[500]!;
+      iconData = Icons.lock;
     }
 
-    return Opacity(
-      opacity: isUnlocked ? 1.0 : 0.7,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 8.0),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: borderColor,
-              width: borderColor == Colors.transparent ? 0.6 : 1.2,
-            ),
-            boxShadow: const [
-              BoxShadow(
-                color: AppColors.shadowColor,
-                blurRadius: 8,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: iconBackgroundColor,
-                  shape: BoxShape.circle,
+    if (Theme.of(context).brightness == Brightness.dark && isLocked) {
+      circleColor = const Color(0xFF2A2A2D);
+      shadowColor = Colors.black;
+      iconColor = Colors.grey[600]!;
+    }
+
+    return Center(
+      child: SizedBox(
+        width: double.infinity,
+        height: 140,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // LINHA CONECTORA
+            if (index < totalLength - 1)
+              Transform.translate(
+                offset: Offset(
+                    (xOffset + (math.sin((index + 1) * 2.5) * 80.0)) / 2,
+                    55
                 ),
-                child: Icon(
-                  iconData,
-                  color: iconColor,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  lesson.title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 16,
-                    color: titleColor,
+                child: Transform.rotate(
+                  angle: -math.atan(
+                      (math.sin((index + 1) * 2.5) * 80.0 - xOffset) / 100
+                  ),
+                  child: Container(
+                    width: 12,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      // A linha fica roxa se já completou, cinza se não
+                      color: isCompleted ? const Color(0xFFBA68C8).withOpacity(0.5) : Colors.grey.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
                   ),
                 ),
               ),
-              if (isUnlocked)
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: defaultTextColor.withOpacity(0.5),
+
+            // BOTÃO 3D
+            Transform.translate(
+              offset: Offset(xOffset, 0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _GameButton3D(
+                    size: buttonSize,
+                    color: circleColor,
+                    shadowColor: shadowColor,
+                    icon: iconData,
+                    iconColor: iconColor,
+                    isLocked: isLocked,
+                    onTap: isLocked
+                        ? null
+                        : () => _navigateToLesson(context, lesson),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  if (!isLocked || isCurrent)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                          color: Theme.of(context).cardColor,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            )
+                          ]
+                      ),
+                      child: Text(
+                        lesson.title,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          // Se for o atual, o texto fica Roxo para combinar
+                          color: isCurrent ? const Color(0xFF8E24AA) : (isLocked ? Colors.grey : AppColors.textDark),
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            // ÍCONE DECORATIVO (Escola/Troféu)
+            if (index % 3 == 0 && index > 0)
+              Transform.translate(
+                offset: Offset(-xOffset * 1.8, -20),
+                child: Icon(
+                  Icons.emoji_events, // Troféu sutil ao fundo
+                  color: Colors.deepPurple.withOpacity(0.05), // Roxo bem clarinho
+                  size: 48,
                 ),
-            ],
-          ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GameButton3D extends StatefulWidget {
+  final double size;
+  final Color color;
+  final Color shadowColor;
+  final IconData icon;
+  final Color iconColor;
+  final bool isLocked;
+  final VoidCallback? onTap;
+
+  const _GameButton3D({
+    required this.size,
+    required this.color,
+    required this.shadowColor,
+    required this.icon,
+    required this.iconColor,
+    required this.isLocked,
+    this.onTap,
+  });
+
+  @override
+  State<_GameButton3D> createState() => _GameButton3DState();
+}
+
+class _GameButton3DState extends State<_GameButton3D> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final double topOffset = _isPressed ? 4.0 : 0.0;
+    final double shadowHeight = 8.0;
+
+    return GestureDetector(
+      onTapDown: (_) {
+        if (!widget.isLocked) setState(() => _isPressed = true);
+      },
+      onTapUp: (_) {
+        if (!widget.isLocked) setState(() => _isPressed = false);
+      },
+      onTapCancel: () {
+        if (!widget.isLocked) setState(() => _isPressed = false);
+      },
+      onTap: widget.onTap,
+      child: SizedBox(
+        width: widget.size,
+        height: widget.size + shadowHeight,
+        child: Stack(
+          children: [
+            // Sombra
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: widget.size,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: widget.shadowColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            // Botão
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 50),
+              top: topOffset,
+              left: 0,
+              right: 0,
+              bottom: shadowHeight - topOffset,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: widget.color,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: widget.isLocked
+                      ? Icon(widget.icon, color: widget.iconColor, size: widget.size * 0.4)
+                      : Icon(widget.icon, color: widget.iconColor, size: widget.size * 0.5),
+                ),
+              ),
+            ),
+            // Brilho
+            if (!widget.isLocked && !_isPressed)
+              Positioned(
+                top: 10,
+                left: 15,
+                child: Container(
+                  width: widget.size * 0.2,
+                  height: widget.size * 0.1,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Para excluir o documento do usuário
 
 import 'package:code_for_fun/screens/login_screen.dart';
 import 'package:code_for_fun/constants/app_colors.dart';
@@ -90,15 +91,7 @@ class SettingsScreen extends StatelessWidget {
           context,
           icon: Icons.delete_forever,
           title: 'Excluir Conta',
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content:
-                Text('Função de excluir conta ainda não implementada.'),
-                backgroundColor: AppColors.textLight,
-              ),
-            );
-          },
+          onTap: () => _showDeleteAccountDialog(context),
         ),
       ],
     );
@@ -173,7 +166,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  // ====== FUNÇÕES ======
+  // ====== FUNÇÕES LÓGICAS ======
 
   void _showEditNameDialog(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -201,25 +194,34 @@ class SettingsScreen extends StatelessWidget {
                 final newName = nameController.text.trim();
                 if (newName.isNotEmpty) {
                   try {
+                    // Atualiza no Auth
                     await user.updateDisplayName(newName);
 
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Nome atualizado! (Pode ser necessário reiniciar o app para ver a mudança)',
+                    // Atualiza no Firestore também para consistência
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user.uid)
+                        .update({'displayName': newName});
+
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Nome atualizado com sucesso!'),
+                          backgroundColor: Colors.green,
                         ),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
+                      );
+                    }
                   } catch (e) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Erro ao atualizar o nome: $e'),
-                        backgroundColor: AppColors.red,
-                      ),
-                    );
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Erro ao atualizar o nome: $e'),
+                          backgroundColor: AppColors.red,
+                        ),
+                      );
+                    }
                   }
                 }
               },
@@ -281,6 +283,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  // RESETAR PROGRESSO
   void _showResetConfirmationDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -302,22 +305,27 @@ class SettingsScreen extends StatelessWidget {
               onPressed: () async {
                 Navigator.of(dialogContext).pop();
                 try {
+                  // Chama o método novo do Provider que limpa Firebase + Local
                   await Provider.of<ScoreProvider>(context, listen: false)
                       .resetAccountProgress();
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Progresso resetado com sucesso!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Progresso resetado com sucesso!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Erro ao resetar: ${e.toString()}'),
-                      backgroundColor: AppColors.red,
-                    ),
-                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Erro ao resetar: ${e.toString()}'),
+                        backgroundColor: AppColors.red,
+                      ),
+                    );
+                  }
                 }
               },
               child: const Text(
@@ -331,13 +339,99 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  // SAIR (LOGOUT)
   void _logout(BuildContext context) async {
-    Provider.of<ScoreProvider>(context, listen: false).resetScore();
+    // Removemos o 'resetScore()' pois ele não existe no novo Provider
+    // e o logout do Firebase já é suficiente.
     await FirebaseAuth.instance.signOut();
 
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-          (Route<dynamic> route) => false,
+    if (context.mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+            (Route<dynamic> route) => false,
+      );
+    }
+  }
+
+  // EXCLUIR CONTA
+  void _showDeleteAccountDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Excluir Conta?'),
+          content: const Text(
+            'Esta ação é irreversível. Seus dados serão apagados permanentemente e você será deslogado.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await _deleteAccount(context);
+              },
+              child: const Text(
+                'Excluir Definitivamente',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  Future<void> _deleteAccount(BuildContext context) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      // 1. Excluir dados do Firestore
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).delete();
+
+      // 2. Excluir usuário da Autenticação
+      await user.delete();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Conta excluída com sucesso.')),
+        );
+
+        // Redirecionar para Login
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+              (Route<dynamic> route) => false,
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      // Se o login for muito antigo, o Firebase pede para relogar antes de excluir
+      if (e.code == 'requires-recent-login') {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Por segurança, faça login novamente antes de excluir a conta.'),
+              backgroundColor: AppColors.red,
+            ),
+          );
+          _logout(context);
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erro ao excluir: ${e.message}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro: $e')),
+        );
+      }
+    }
   }
 }

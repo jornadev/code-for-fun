@@ -8,7 +8,10 @@ import 'package:code_for_fun/model/trail_model.dart';
 import 'package:code_for_fun/screens/trail_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+  ProfileScreen({super.key});
+
+  // Instanciamos o serviço para buscar os dados
+  final TrailService _trailService = TrailService();
 
   @override
   Widget build(BuildContext context) {
@@ -17,22 +20,6 @@ class ProfileScreen extends StatelessWidget {
     final String userEmail = user?.email ?? 'email@nao-encontrado.com';
 
     final scoreProvider = context.watch<ScoreProvider>();
-    final Set<String> completedLessonIds =
-    scoreProvider.completedLessonIds.toSet();
-
-    final List<Trail> allTrails = TrailService.getRecommendedTrails();
-
-    final List<Trail> inProgressTrails = allTrails.where((trail) {
-      if (trail.lessons.isEmpty) return false;
-
-      final int completedCount = trail.lessons
-          .where((l) => completedLessonIds.contains(l.id))
-          .length;
-
-      final double progress = completedCount / trail.lessons.length;
-
-      return progress > 0 && progress < 1;
-    }).toList();
 
     final int score = scoreProvider.score;
     String userLevel;
@@ -122,7 +109,30 @@ class ProfileScreen extends StatelessWidget {
         ),
 
         const SizedBox(height: 24),
-        _buildInProgressSection(context, inProgressTrails),
+
+        // --- STREAM BUILDER PARA CURSOS EM ANDAMENTO ---
+        StreamBuilder<List<Trail>>(
+          stream: _trailService.getTrailsStream(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return const Text('Erro ao carregar cursos.');
+            }
+
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final allTrails = snapshot.data ?? [];
+
+            // Filtramos usando o 'progress' que vem do Firebase
+            final inProgressTrails = allTrails.where((trail) {
+              return trail.progress > 0 && trail.progress < 1.0;
+            }).toList();
+
+            return _buildInProgressSection(context, inProgressTrails);
+          },
+        ),
+
         const SizedBox(height: 24),
       ],
     );
@@ -167,16 +177,8 @@ class ProfileScreen extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             itemBuilder: (context, index) {
               final trail = inProgressTrails[index];
-              final int completedCount = trail.lessons
-                  .where((l) => context
-                  .read<ScoreProvider>()
-                  .completedLessonIds
-                  .contains(l.id))
-                  .length;
-              final double progress =
-              (completedCount > 0 && trail.lessons.isNotEmpty)
-                  ? (completedCount / trail.lessons.length)
-                  : 0.0;
+              // Usamos o progresso direto do objeto Trail
+              final double progress = trail.progress;
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -255,7 +257,7 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${trail.lessons.length} Lições • ${trail.level}',
+                        trail.level, // Mudei de "X Lições" para apenas o Nível, pois a lista de lições vem vazia
                         style: TextStyle(
                           color: textColor.withOpacity(0.7),
                           fontSize: 12,

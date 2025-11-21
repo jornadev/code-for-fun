@@ -5,7 +5,6 @@ import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'package:code_for_fun/providers/theme_provider.dart';
 import 'package:code_for_fun/providers/score_provider.dart';
-
 import 'package:code_for_fun/screens/splash_screen.dart';
 
 void main() async {

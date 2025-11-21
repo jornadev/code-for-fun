@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:code_for_fun/model/lesson_model.dart';
 import 'package:provider/provider.dart';
+import 'package:code_for_fun/model/lesson_model.dart';
 import 'package:code_for_fun/providers/score_provider.dart';
 import 'package:code_for_fun/constants/app_colors.dart';
 
@@ -17,7 +17,7 @@ class _LessonScreenState extends State<LessonScreen> {
   int _currentQuestionIndex = 0;
   Answer? _selectedAnswer;
   bool _isAnswerChecked = false;
-  bool _isFinishing = false;
+  bool _isFinishing = false; // Controla o estado de carregamento ao salvar
 
   Question get _currentQuestion =>
       widget.lesson.questions[_currentQuestionIndex];
@@ -61,6 +61,7 @@ class _LessonScreenState extends State<LessonScreen> {
   }
 
   Future<void> _handleContinue(bool isCorrect) async {
+    // Se errou, apenas reseta para tentar de novo
     if (!isCorrect) {
       setState(() {
         _selectedAnswer = null;
@@ -69,29 +70,36 @@ class _LessonScreenState extends State<LessonScreen> {
       return;
     }
 
+    // Evita cliques duplos enquanto salva
     if (_isFinishing) return;
+
+    final scoreProvider = Provider.of<ScoreProvider>(context, listen: false);
 
     try {
       if (_isLastQuestion) {
+        // --- FINALIZANDO A LIÇÃO ---
         setState(() {
           _isFinishing = true;
         });
 
-        await Provider.of<ScoreProvider>(context, listen: false)
-            .incrementScore();
-        await Provider.of<ScoreProvider>(context, listen: false)
-            .completeLesson(widget.lesson.id);
+        // 1. Adiciona pontos pela última pergunta (10 pontos)
+        await scoreProvider.addScore(10);
+
+        // 2. Marca a lição como completa no Firebase
+        await scoreProvider.completeLesson(widget.lesson.id);
 
         if (mounted) {
+          // Retorna 'true' para avisar a tela anterior que terminou
           Navigator.of(context).pop(true);
         }
       } else {
+        // --- PRÓXIMA PERGUNTA ---
         setState(() {
-          _isFinishing = true;
+          _isFinishing = true; // Mostra loading no botão
         });
 
-        await Provider.of<ScoreProvider>(context, listen: false)
-            .incrementScore();
+        // 1. Adiciona pontos pela pergunta atual (10 pontos)
+        await scoreProvider.addScore(10);
 
         _nextQuestion();
 
@@ -100,7 +108,7 @@ class _LessonScreenState extends State<LessonScreen> {
         });
       }
     } catch (e) {
-      _showErrorSnackBar(e.toString());
+      _showErrorSnackBar("Erro ao salvar progresso: $e");
       if (mounted) {
         setState(() {
           _isFinishing = false;
@@ -129,12 +137,12 @@ class _LessonScreenState extends State<LessonScreen> {
       ),
       body: Column(
         children: [
+          // Barra de progresso superior
           LinearProgressIndicator(
             value: (_currentQuestionIndex + 1) /
                 widget.lesson.questions.length,
             backgroundColor: AppColors.inputGray,
-            valueColor:
-            const AlwaysStoppedAnimation<Color>(AppColors.blue),
+            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.blue),
           ),
           Expanded(
             child: SingleChildScrollView(
@@ -159,10 +167,13 @@ class _LessonScreenState extends State<LessonScreen> {
                     ),
                   ),
                   const SizedBox(height: 32),
+                  // Lista de Respostas
                   ..._currentQuestion.answers
                       .map((answer) => _buildAnswerOption(answer))
                       .toList(),
                   const SizedBox(height: 40),
+
+                  // Botão de Confirmar (Visível apenas se ainda não checou)
                   if (!_isAnswerChecked)
                     SizedBox(
                       width: double.infinity,
@@ -192,6 +203,7 @@ class _LessonScreenState extends State<LessonScreen> {
           ),
         ],
       ),
+      // BottomSheet aparece quando a resposta é verificada
       bottomSheet: _isAnswerChecked ? _buildFeedbackSheet() : null,
     );
   }
@@ -294,8 +306,7 @@ class _LessonScreenState extends State<LessonScreen> {
               backgroundColor: Colors.white,
               foregroundColor:
               isCorrect ? const Color(0xFF28A745) : const Color(0xFFDC3545),
-              padding:
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
               ),

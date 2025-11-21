@@ -14,10 +14,12 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
+  // AQUI FOI A MUDANÇA:
+  // ProfileScreen() não é mais 'const' porque agora tem lógica de banco de dados dentro.
   static final List<Widget> _screens = <Widget>[
     const HomeScreen(),
     const RankingScreen(),
-    const ProfileScreen(),
+    ProfileScreen(), // <--- Removi o 'const' aqui
     const SettingsScreen(),
   ];
 
