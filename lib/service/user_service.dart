@@ -5,13 +5,16 @@ class UserService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  // Getter auxiliar para pegar o ID atual de forma limpa
+  String? get _userId => _auth.currentUser?.uid;
+
+  // 1. Criação inicial do perfil (usado no Registro)
   Future<void> createUserDocument(User user, String name) async {
     final docRef = _db.collection('users').doc(user.uid);
 
     final doc = await docRef.get();
     if (doc.exists) {
-      print("Aviso: Documento já existia, pulando criação.");
-      return;
+      return; // Se já existe, não faz nada
     }
 
     try {
@@ -20,7 +23,7 @@ class UserService {
         'email': user.email ?? '',
         'displayName': name,
         'score': 0,
-        'completedLessons': [],
+        'completedLessons': [], // Lista vazia inicial
         'createdAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
@@ -29,62 +32,68 @@ class UserService {
     }
   }
 
+  // 2. Buscar Pontuação
   Future<int> getUserScore() async {
-    final user = _auth.currentUser;
-    if (user == null) return 0;
+    if (_userId == null) return 0;
 
     try {
-      final doc = await _db.collection('users').doc(user.uid).get();
-      if (doc.exists) {
-        return doc.data()?['score'] ?? 0;
-      } else {
-        return 0;
+      final doc = await _db.collection('users').doc(_userId).get();
+      if (doc.exists && doc.data() != null) {
+        return doc.data()!['score'] ?? 0;
       }
+      return 0;
     } catch (e) {
       print("Erro ao buscar pontuação: $e");
       return 0;
     }
   }
 
+  // 3. Atualizar Pontuação (CORRIGIDO COM MERGE)
   Future<void> updateUserScore(int newScore) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+    if (_userId == null) return;
 
     try {
-      final docRef = _db.collection('users').doc(user.uid);
-      await docRef.update({'score': newScore});
+      // 'SetOptions(merge: true)' cria o documento se ele não existir
+      await _db.collection('users').doc(_userId).set(
+        {'score': newScore},
+        SetOptions(merge: true),
+      );
     } catch (e) {
-      print("Erro ao ATUALIZAR pontuação: $e");
-      throw Exception("Falha ao salvar pontuação: $e");
+      print("Erro ao salvar pontuação: $e");
+      throw Exception("Falha ao salvar pontuação.");
     }
   }
 
+  // 4. Completar Lição (CORRIGIDO COM MERGE)
   Future<void> completeLesson(String lessonId) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+    if (_userId == null) return;
 
     try {
-      final docRef = _db.collection('users').doc(user.uid);
-      await docRef.update({
-        'completedLessons': FieldValue.arrayUnion([lessonId])
-      });
+      await _db.collection('users').doc(_userId).set(
+        {
+          // Adiciona à lista sem duplicar (arrayUnion)
+          'completedLessons': FieldValue.arrayUnion([lessonId])
+        },
+        SetOptions(merge: true),
+      );
     } catch (e) {
-      print("Erro ao COMPLETAR lição: $e");
-      throw Exception("Falha ao salvar progresso: $e");
+      print("Erro ao salvar progresso da lição: $e");
+      throw Exception("Falha ao salvar progresso.");
     }
   }
 
+  // 5. Buscar quais lições já foram feitas
   Future<List<String>> getCompletedLessons() async {
-    final user = _auth.currentUser;
-    if (user == null) return [];
+    if (_userId == null) return [];
 
     try {
-      final doc = await _db.collection('users').doc(user.uid).get();
-      if (doc.exists) {
-        final data = doc.data();
-        if (data != null && data.containsKey('completedLessons')) {
-          List<dynamic> completed = data['completedLessons'] ?? [];
-          return completed.map((item) => item.toString()).toList();
+      final doc = await _db.collection('users').doc(_userId).get();
+
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        if (data['completedLessons'] != null) {
+          // Converte a lista dinâmica do Firebase para List<String>
+          return List<String>.from(data['completedLessons']);
         }
       }
       return [];
@@ -94,6 +103,7 @@ class UserService {
     }
   }
 
+  // 6. Ranking Global
   Future<List<Map<String, dynamic>>> getRanking() async {
     try {
       final querySnapshot = await _db
@@ -103,27 +113,29 @@ class UserService {
           .get();
 
       return querySnapshot.docs
-          .map((doc) => doc.data() as Map<String, dynamic>)
+          .map((doc) => doc.data())
           .toList();
     } catch (e) {
       print("Erro ao buscar ranking: $e");
-      throw Exception("Não foi possível carregar o ranking.");
+      return []; // Retorna vazio em vez de quebrar o app
     }
   }
 
+  // 7. Resetar Progresso (Para testes ou configurações)
   Future<void> resetUserProgress() async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception("Usuário não logado.");
+    if (_userId == null) return;
 
     try {
-      final docRef = _db.collection('users').doc(user.uid);
-      await docRef.update({
-        'score': 0,
-        'completedLessons': [],
-      });
+      await _db.collection('users').doc(_userId).set(
+        {
+          'score': 0,
+          'completedLessons': [],
+        },
+        SetOptions(merge: true),
+      );
     } catch (e) {
-      print("Erro ao resetar progresso no Firestore: $e");
-      throw Exception("Falha ao resetar seu progresso no banco de dados.");
+      print("Erro ao resetar progresso: $e");
+      throw Exception("Falha ao resetar dados.");
     }
   }
 }
