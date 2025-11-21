@@ -14,7 +14,6 @@ class LessonScreen extends StatefulWidget {
 }
 
 class _LessonScreenState extends State<LessonScreen> {
-  // Cores do Tema
   final Color _mainPurple = const Color(0xFF673AB7);
   final Color _correctGreen = const Color(0xFF58CC02);
   final Color _wrongRed = const Color(0xFFFF4B4B);
@@ -70,8 +69,9 @@ class _LessonScreenState extends State<LessonScreen> {
     );
   }
 
+  // --- LÓGICA DE CONTINUAR / FINALIZAR ---
   Future<void> _handleContinue(bool isCorrect) async {
-    // Se errou, apenas reseta para tentar de novo (não avança)
+    // Se errou, apenas reseta para tentar de novo
     if (!isCorrect) {
       setState(() {
         _selectedAnswer = null;
@@ -86,14 +86,19 @@ class _LessonScreenState extends State<LessonScreen> {
 
     try {
       if (_isLastQuestion) {
+        // --- FINALIZANDO A LIÇÃO ---
         setState(() => _isFinishing = true);
+
+        // Salva no Firebase
         await scoreProvider.addScore(10);
         await scoreProvider.completeLesson(widget.lesson.id);
 
         if (mounted) {
-          Navigator.of(context).pop(true);
+          // Em vez de sair direto, mostra o Dialog de Vitória!
+          _showCompletionDialog();
         }
       } else {
+        // --- PRÓXIMA PERGUNTA ---
         setState(() => _isFinishing = true);
         await scoreProvider.addScore(10);
         _nextQuestion();
@@ -103,6 +108,95 @@ class _LessonScreenState extends State<LessonScreen> {
       _showErrorSnackBar("Erro ao salvar progresso: $e");
       if (mounted) setState(() => _isFinishing = false);
     }
+  }
+
+  // --- DIALOG DE VITÓRIA (COM O DUCK 🦆) ---
+  void _showCompletionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Obriga a clicar no botão
+      builder: (ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 1. IMAGEM DO DUKE (PATO)
+                Container(
+                  height: 140,
+                  width: 140,
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.2), // Círculo dourado de fundo
+                    shape: BoxShape.circle,
+                  ),
+                  // Adicionei padding para o pato não ficar colado na borda do círculo
+                  padding: const EdgeInsets.all(20),
+                  child: Image.asset(
+                    'assets/images/duck.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // 2. TÍTULO
+                Text(
+                  'Mandou Bem!',
+                  style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: _mainPurple
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 12),
+
+                // 3. TEXTO DE XP
+                Text(
+                  'Você concluiu a lição e ganhou +10 XP!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // 4. BOTÃO CONTINUAR
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop(); // Fecha o Dialog
+                      Navigator.of(context).pop(true); // Fecha a Tela de Lição e volta pra Trilha
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _mainPurple,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text(
+                      'CONTINUAR',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -195,7 +289,6 @@ class _LessonScreenState extends State<LessonScreen> {
   Widget _buildAnswerOption(Answer answer) {
     final bool isSelected = _selectedAnswer == answer;
 
-    // Configuração Padrão (Neutro)
     Color borderColor = Colors.grey[300]!;
     Color backgroundColor = Colors.white;
     Color textColor = AppColors.textDark;
@@ -203,11 +296,10 @@ class _LessonScreenState extends State<LessonScreen> {
     Color? statusIconColor;
     Color? statusBoxColor;
 
-    // --- LÓGICA DE CORES ---
+    // Lógica de Cores (Vermelho só no selecionado errado, Verde na certa)
     if (_isAnswerChecked) {
       if (isSelected) {
         if (answer.isCorrect) {
-          // Usuário selecionou a CERTA -> Verde
           borderColor = _correctGreen;
           backgroundColor = _correctGreen.withOpacity(0.1);
           textColor = _correctGreen;
@@ -215,7 +307,6 @@ class _LessonScreenState extends State<LessonScreen> {
           statusIconColor = Colors.white;
           statusBoxColor = _correctGreen;
         } else {
-          // Usuário selecionou a ERRADA -> Vermelho
           borderColor = _wrongRed;
           backgroundColor = _wrongRed.withOpacity(0.1);
           textColor = _wrongRed;
@@ -224,13 +315,11 @@ class _LessonScreenState extends State<LessonScreen> {
           statusBoxColor = _wrongRed;
         }
       } else {
-        // Opções NÃO selecionadas (Incluindo a certa se o usuário errou)
-        // Mantemos neutro para não dar spoiler
+        // Neutro para não revelar a resposta
         borderColor = Colors.grey[200]!;
-        textColor = Colors.grey[400]!; // Deixa um pouco mais apagado
+        textColor = Colors.grey[400]!;
       }
     } else if (isSelected) {
-      // Selecionado (ainda não verificado) -> Roxo
       borderColor = _mainPurple;
       backgroundColor = _mainPurple.withOpacity(0.1);
       textColor = _mainPurple;
@@ -255,7 +344,6 @@ class _LessonScreenState extends State<LessonScreen> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: borderColor,
-            // Borda mais grossa se estiver selecionado
             width: (isSelected || (_isAnswerChecked && isSelected)) ? 2.5 : 1.5,
           ),
           boxShadow: isSelected && !_isAnswerChecked
@@ -270,7 +358,6 @@ class _LessonScreenState extends State<LessonScreen> {
         ),
         child: Row(
           children: [
-            // Caixa do ícone (Check, X ou vazio)
             Container(
               width: 30,
               height: 30,
@@ -308,7 +395,6 @@ class _LessonScreenState extends State<LessonScreen> {
 
     final bool isCorrect = _selectedAnswer!.isCorrect;
 
-    // Cores e Textos do BottomSheet
     final Color sheetColor = isCorrect ? _correctGreen : _wrongRed;
     final String title = isCorrect ? 'Incrível!' : 'Incorreto';
     final String btnText = isCorrect
@@ -357,7 +443,7 @@ class _LessonScreenState extends State<LessonScreen> {
               height: 56,
               child: ElevatedButton(
                 onPressed: (isCorrect && _isFinishing)
-                    ? null
+                    ? null // Desabilita se estiver salvando
                     : () => _handleContinue(isCorrect),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: sheetColor,
