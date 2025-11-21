@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login_screen.dart';
-import 'home_screen.dart';
+import 'main_navigation_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -51,7 +51,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         );
       } else {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          // --- LINHA MODIFICADA ---
+          MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
         );
       }
     }

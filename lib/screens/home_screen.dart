@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Adicionado para buscar o usuário
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:code_for_fun/model/trail_model.dart';
 import 'package:code_for_fun/service/trail_service.dart';
 import 'package:code_for_fun/screens/trail_screen.dart';
-import 'package:code_for_fun/screens/settings_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:code_for_fun/providers/score_provider.dart';
+import 'package:code_for_fun/constants/app_colors.dart';
 
-// 1. A classe foi convertida para StatefulWidget para gerenciar o estado do nome.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -14,90 +15,66 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // 2. Variável de estado para armazenar o nome do usuário.
-  String _userName = '...'; // Inicia com um placeholder
+  String _userName = '...';
 
   @override
   void initState() {
     super.initState();
-    // 3. Função chamada para carregar o nome do usuário quando a tela é iniciada.
     _loadUserName();
+    Provider.of<ScoreProvider>(context, listen: false).loadUserData();
   }
 
   void _loadUserName() {
     final user = FirebaseAuth.instance.currentUser;
-    // Verifica se o usuário está logado e tem um nome de exibição definido.
-    if (user != null && user.displayName != null && user.displayName!.isNotEmpty) {
+    if (user != null &&
+        user.displayName != null &&
+        user.displayName!.isNotEmpty) {
       setState(() {
-        // Atualiza a variável de estado com o nome do usuário.
-        // toUpperCase() é usado para manter o estilo "BEM VINDO, NOME".
         _userName = user.displayName!.toUpperCase();
       });
     } else {
-      // Se não houver nome, usa um valor padrão.
       setState(() {
         _userName = 'JOGADOR';
       });
     }
   }
 
-  // A partir daqui, é o seu código original.
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF0F0F5),
-      body: SingleChildScrollView(
+    final scoreProvider = context.watch<ScoreProvider>();
+    final Set<String> completedIds = scoreProvider.completedLessonIds.toSet();
+
+    final theme = Theme.of(context);
+    final backgroundColor = theme.scaffoldBackgroundColor;
+
+    return SingleChildScrollView(
+      child: Container(
+        color: backgroundColor,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 4. Passa a variável _userName para o método que constrói o cabeçalho.
             _buildHeader(context, _userName),
-            _buildContinueSection(context),
-            const SizedBox(height: 24),
+            _buildContinueSection(context, completedIds),
             _buildRecommendedSection(context),
             const SizedBox(height: 24),
-            _buildYourTrailsSection(context),
+            _buildYourTrailsSection(context, completedIds),
+            const SizedBox(height: 24),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.deepPurple,
-        unselectedItemColor: Colors.grey[400],
-        type: BottomNavigationBarType.fixed,
-        onTap: (index) {
-          if (index == 3) {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => const SettingsScreen()),
-            );
-          }
-        },
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.emoji_events),
-            label: 'Ranking',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Perfil',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Ajustes',
-          ),
-        ],
       ),
     );
   }
 
-  // 5. O método _buildHeader agora aceita o nome como um parâmetro.
+  // HEADER ------------------------------------------------------------------
+
   Widget _buildHeader(BuildContext context, String userName) {
+    final theme = Theme.of(context);
+    final textColor =
+        theme.textTheme.bodyLarge?.color ?? AppColors.textDark;
+
     return Container(
-      padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 20),
+      padding:
+      const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -107,18 +84,18 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  // 6. AQUI! O nome estático foi trocado pela variável dinâmica.
                   'BEM VINDO, $userName',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
+                    color: textColor,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Pronto para o próximo desafio?',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: textColor.withOpacity(0.7),
                     fontSize: 14,
                   ),
                 ),
@@ -126,35 +103,39 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.cardColor,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withOpacity(0.06),
                   blurRadius: 10,
                   offset: const Offset(0, 5),
                 ),
               ],
             ),
-            child: Row(
-              children: [
-                const Text(
-                  '250',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.deepPurple,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.star,
-                  color: Colors.amber,
-                  size: 20,
-                ),
-              ],
+            child: Consumer<ScoreProvider>(
+              builder: (context, provider, child) {
+                return Row(
+                  children: [
+                    const Icon(Icons.star,
+                        color: Colors.amber, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      provider.isLoading
+                          ? '...'
+                          : provider.score.toString(),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.secondary,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -162,50 +143,68 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // O restante do seu código original, sem nenhuma alteração.
-  Widget _buildContinueSection(BuildContext context) {
-    // No seu trail_service.dart original, você não tinha o método getUserTrails.
-    // Estou usando getRecommendedTrails() para evitar erros, conforme seu código anterior.
-    final userTrails = TrailService.getRecommendedTrails();
-    final firstTrail = userTrails.isNotEmpty ? userTrails.first : null;
+  // CONTINUE SECTION --------------------------------------------------------
 
-    if (firstTrail == null) {
+  Widget _buildContinueSection(
+      BuildContext context, Set<String> completedIds) {
+    final inProgressTrails = TrailService.getInProgressTrails();
+    if (inProgressTrails.isEmpty) {
       return const SizedBox.shrink();
     }
+    final firstTrail = inProgressTrails.first;
+
+    final int completedCount = firstTrail.lessons
+        .where((l) => completedIds.contains(l.id))
+        .length;
+    final double progress = (firstTrail.lessons.isEmpty)
+        ? 0.0
+        : (completedCount / firstTrail.lessons.length);
+
+    final textColor =
+        Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textDark;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Retome de onde parou',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
+              color: textColor,
             ),
           ),
           const SizedBox(height: 16),
           _buildProgressCard(
             context,
             trail: firstTrail,
+            progress: progress,
           ),
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 
+  // RECOMMENDED SECTION -----------------------------------------------------
+
   Widget _buildRecommendedSection(BuildContext context) {
+    final textColor =
+        Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textDark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Trilhas Recomendadas',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
+              color: textColor,
             ),
           ),
           const SizedBox(height: 16),
@@ -225,86 +224,132 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildYourTrailsSection(BuildContext context) {
-    // Novamente, usando getRecommendedTrails para manter a consistência com o código original
-    final userTrails = TrailService.getRecommendedTrails();
-    if (userTrails.length <= 1) {
-      return const SizedBox.shrink();
-    }
+  // YOUR TRAILS SECTION -----------------------------------------------------
+
+  Widget _buildYourTrailsSection(
+      BuildContext context, Set<String> completedIds) {
+    final textColor =
+        Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textDark;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Suas trilhas',
+          Text(
+            'Suas Trilhas',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
+              color: textColor,
             ),
           ),
           const SizedBox(height: 16),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: userTrails.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 16),
-            itemBuilder: (context, index) {
-              final trail = userTrails[index];
-              return _buildProgressCard(context, trail: trail);
-            },
+          Column(
+            children: TrailService.getRecommendedTrails().map((trail) {
+              final int completedCount = trail.lessons
+                  .where((l) => completedIds.contains(l.id))
+                  .length;
+              final double progress = (trail.lessons.isEmpty)
+                  ? 0.0
+                  : (completedCount / trail.lessons.length);
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _buildProgressCard(
+                  context,
+                  trail: trail,
+                  progress: progress,
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildProgressCard(BuildContext context, {required Trail trail}) {
+  // CARDS -------------------------------------------------------------------
+
+  Widget _buildProgressCard(
+      BuildContext context, {
+        required Trail trail,
+        required double progress,
+      }) {
+    String percentageLabel = '${(progress * 100).toInt()}%';
+
+    final theme = Theme.of(context);
+    final textColor =
+        theme.textTheme.bodyLarge?.color ?? AppColors.textDark;
+
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => TrailScreen(trail: trail)),
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => TrailScreen(trail: trail),
+          ),
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
               blurRadius: 10,
-              offset: const Offset(0, 5),
             ),
           ],
         ),
-        child: Row(
+        child: Column(
           children: [
-            CircleAvatar(
-              radius: 25,
-              backgroundColor: trail.iconColor.withOpacity(0.1),
-              child: Icon(trail.icon, color: trail.iconColor, size: 30),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    trail.title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: trail.iconColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 4),
-                  _buildProgressBar(trail.progress, '${(trail.progress * 100).toStringAsFixed(0)}%'),
-                ],
-              ),
+                  child: Icon(
+                    trail.icon,
+                    color: trail.iconColor,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        trail.title,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${trail.lessons.length} Lições • ${trail.level}',
+                        style: TextStyle(
+                          color: textColor.withOpacity(0.7),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: textColor.withOpacity(0.5),
+                ),
+              ],
             ),
+            const SizedBox(height: 16),
+            _buildProgressBar(context, progress, percentageLabel),
           ],
         ),
       ),
@@ -312,63 +357,62 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTrailCard(BuildContext context, {required Trail trail}) {
+    final theme = Theme.of(context);
+    final textColor =
+        theme.textTheme.bodyLarge?.color ?? AppColors.textDark;
+
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => TrailScreen(trail: trail)),
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => TrailScreen(trail: trail),
+          ),
         );
       },
       child: Container(
         width: 160,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
               blurRadius: 10,
-              offset: const Offset(0, 5),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: trail.iconColor.withOpacity(0.1),
-              child: Icon(trail.icon, color: trail.iconColor),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: trail.iconColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                trail.icon,
+                color: trail.iconColor,
+                size: 24,
+              ),
             ),
             const SizedBox(height: 12),
             Text(
               trail.title,
-              style: const TextStyle(
-                fontSize: 16,
+              style: TextStyle(
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
+                color: textColor,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               trail.level,
               style: TextStyle(
-                color: Colors.grey[600],
+                color: textColor.withOpacity(0.7),
                 fontSize: 12,
               ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.star, color: Colors.amber, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  '4.5',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
             ),
           ],
         ),
@@ -376,15 +420,26 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildProgressBar(double progress, String percentageLabel) {
+  // PROGRESS BAR ------------------------------------------------------------
+
+  Widget _buildProgressBar(
+      BuildContext context, double progress, String percentageLabel) {
+    final isDark =
+        Theme.of(context).brightness == Brightness.dark;
+
     return Stack(
       children: [
-        LinearProgressIndicator(
-          value: progress,
-          backgroundColor: Colors.grey[300],
-          valueColor: const AlwaysStoppedAnimation<Color>(Colors.deepPurple),
+        ClipRRect(
           borderRadius: BorderRadius.circular(10),
-          minHeight: 16,
+          child: LinearProgressIndicator(
+            value: progress,
+            backgroundColor:
+            isDark ? Colors.grey[800] : Colors.grey[300],
+            valueColor: const AlwaysStoppedAnimation<Color>(
+              Colors.deepPurple,
+            ),
+            minHeight: 16,
+          ),
         ),
         Positioned.fill(
           child: Center(
