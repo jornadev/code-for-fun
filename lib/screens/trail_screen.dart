@@ -154,8 +154,6 @@ class _TrailScreenState extends State<TrailScreen> {
 
   // --- WIDGET DA LINHA DE CHEGADA ---
   Widget _buildFinishLine(BuildContext context, bool isTrailCompleted, bool isDark) {
-    final Color trophyColor = isTrailCompleted ? Colors.amber : Colors.grey;
-
     return Padding(
       padding: const EdgeInsets.only(top: 40, bottom: 40),
       child: Center(
@@ -212,6 +210,13 @@ class _TrailScreenState extends State<TrailScreen> {
     );
   }
 
+  // --- FUNÇÃO AUXILIAR PARA LIMPAR O TÍTULO ---
+  String _cleanLessonTitle(String title) {
+    // Remove o prefixo "Módulo X:" ou "Módulo X: "
+    final regex = RegExp(r'^Módulo\s+\d+:\s*');
+    return title.replaceAll(regex, '').trim();
+  }
+
 
   Widget _buildPathNode(
       BuildContext context,
@@ -226,13 +231,12 @@ class _TrailScreenState extends State<TrailScreen> {
     // Curva Zig-Zag
     final double xOffset = math.sin(index * 2.5) * 80.0;
 
-    final cardTitleBg = isDark ? const Color(0xFF3A3A3A) : Colors.white;
+    final lessonNumber = index + 1;
 
     // --- PALETA DE CORES DINÂMICA ---
     Color circleColor;
     Color shadowColor;
     Color iconColor;
-    IconData iconData;
     double buttonSize = 75.0;
 
     if (isCompleted) {
@@ -240,20 +244,29 @@ class _TrailScreenState extends State<TrailScreen> {
       circleColor = Colors.amber;
       shadowColor = Colors.amber[800]!;
       iconColor = Colors.white;
-      iconData = Icons.star_rounded;
     } else if (isCurrent) {
       // Atual: Roxo Principal (Destaque)
       circleColor = _mainPurple;
       shadowColor = const Color(0xFF4527A0);
       iconColor = Colors.white;
-      iconData = Icons.play_arrow_rounded;
       buttonSize = 90.0;
     } else {
       // Bloqueada: Cinza Escuro (No Dark Mode) ou Cinza Claro (No Light Mode)
       circleColor = isDark ? const Color(0xFF424242) : Colors.grey[300]!;
       shadowColor = isDark ? Colors.black54 : Colors.grey[400]!;
       iconColor = isDark ? Colors.white30 : Colors.grey[500]!;
-      iconData = Icons.lock;
+    }
+
+    // Define o conteúdo central do botão
+    String? labelContent;
+    IconData iconContent = Icons.lock;
+
+    if (isLocked) {
+      iconContent = Icons.lock; // Cadeado para bloqueado
+    } else if (isCompleted) {
+      iconContent = Icons.star_rounded; // Estrela para completo
+    } else {
+      labelContent = '$lessonNumber'; // Número da lição se estiver atual/liberada
     }
 
     return Center(
@@ -264,7 +277,7 @@ class _TrailScreenState extends State<TrailScreen> {
           alignment: Alignment.center,
           children: [
             // 1. LINHA CONECTORA
-            if (index < totalLength) // A linha deve se conectar à Linha de Chegada
+            if (index < totalLength)
               Transform.translate(
                 offset: Offset(
                     (xOffset + (math.sin((index + 1) * 2.5) * 80.0)) / 2,
@@ -287,7 +300,7 @@ class _TrailScreenState extends State<TrailScreen> {
                 ),
               ),
 
-            // 2. O BOTÃO 3D
+            // 2. O BOTão 3D
             Transform.translate(
               offset: Offset(xOffset, 0),
               child: Column(
@@ -298,46 +311,17 @@ class _TrailScreenState extends State<TrailScreen> {
                     size: buttonSize,
                     color: circleColor,
                     shadowColor: shadowColor,
-                    icon: iconData,
+                    icon: iconContent,
                     iconColor: iconColor,
                     isLocked: isLocked,
+                    // Passa o número da lição ou null
+                    label: labelContent,
                     onTap: isLocked
                         ? null
                         : () => _navigateToLesson(context, lesson),
                   ),
 
-                  const SizedBox(height: 8),
-
-                  // Título da Lição
-                  if (!isLocked || isCurrent)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                          color: cardTitleBg, // Fundo adaptável
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
-                              blurRadius: 6,
-                              offset: const Offset(0, 3),
-                            )
-                          ]
-                      ),
-                      child: Text(
-                        lesson.title,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          // Cor do texto
-                          color: isCurrent
-                              ? _mainPurple
-                              : isDark ? Colors.white : AppColors.textDark,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
+                  // Removido: Título da Lição (para limpar o mapa)
                 ],
               ),
             ),
@@ -359,14 +343,15 @@ class _TrailScreenState extends State<TrailScreen> {
   }
 }
 
-// --- WIDGET DO BOTÃO 3D ---
+// --- WIDGET DO BOTÃO 3D (ATUALIZADO PARA SUPORTAR NÚMERO E ÍCONE) ---
 class _GameButton3D extends StatefulWidget {
   final double size;
   final Color color;
   final Color shadowColor;
-  final IconData icon;
+  final IconData icon; // Agora usado para cadeado/estrela
   final Color iconColor;
   final bool isLocked;
+  final String? label; // Usado para o número da lição
   final VoidCallback? onTap;
 
   const _GameButton3D({
@@ -376,6 +361,7 @@ class _GameButton3D extends StatefulWidget {
     required this.icon,
     required this.iconColor,
     required this.isLocked,
+    this.label,
     this.onTap,
   });
 
@@ -433,9 +419,16 @@ class _GameButton3DState extends State<_GameButton3D> {
                   shape: BoxShape.circle,
                 ),
                 child: Center(
-                  child: widget.isLocked
-                      ? Icon(widget.icon, color: widget.iconColor, size: widget.size * 0.4)
-                      : Icon(widget.icon, color: widget.iconColor, size: widget.size * 0.5),
+                  child: widget.label != null && !widget.isLocked // Se tem número, mostra o número
+                      ? Text(
+                    widget.label!,
+                    style: TextStyle(
+                      fontSize: widget.size * 0.4,
+                      fontWeight: FontWeight.w900,
+                      color: widget.iconColor,
+                    ),
+                  )
+                      : Icon(widget.icon, color: widget.iconColor, size: widget.size * 0.4), // Senão, mostra o ícone (cadeado ou estrela)
                 ),
               ),
             ),

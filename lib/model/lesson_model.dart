@@ -1,3 +1,5 @@
+import 'dart:convert'; // Necessário para JSON
+
 class Answer {
   final String id;
   final String text;
@@ -9,7 +11,6 @@ class Answer {
     required this.isCorrect,
   });
 
-  // Tradutor de JSON para Objeto Answer
   factory Answer.fromMap(Map<String, dynamic> map) {
     return Answer(
       id: map['id'] ?? '',
@@ -23,14 +24,15 @@ class Question {
   final String id;
   final String text;
   final List<Answer> answers;
+  final String? hintText; // <-- NOVO CAMPO ADICIONADO
 
   const Question({
     required this.id,
     required this.text,
     required this.answers,
+    this.hintText, // <-- ADICIONADO AO CONSTRUTOR
   });
 
-  // Tradutor de JSON para Objeto Question
   factory Question.fromMap(Map<String, dynamic> map) {
     return Question(
       id: map['id'] ?? '',
@@ -39,6 +41,7 @@ class Question {
           ?.map((x) => Answer.fromMap(x))
           .toList() ??
           [],
+      hintText: map['hintText'] as String?, // <-- LENDO O CAMPO
     );
   }
 }
@@ -56,7 +59,6 @@ class Lesson {
     required this.questions,
   });
 
-  // --- ESTE ERA O MÉTODO QUE FALTAVA ---
   factory Lesson.fromMap(Map<String, dynamic> map, String documentId) {
     return Lesson(
       id: documentId,

@@ -23,6 +23,8 @@ class _LessonScreenState extends State<LessonScreen> {
   Answer? _selectedAnswer;
   bool _isAnswerChecked = false;
   bool _isFinishing = false;
+  // NOVO: Rastreia se o usuário errou na primeira tentativa
+  bool _hasErrored = false;
 
   Question get _currentQuestion =>
       widget.lesson.questions[_currentQuestionIndex];
@@ -57,6 +59,7 @@ class _LessonScreenState extends State<LessonScreen> {
         _currentQuestionIndex++;
         _selectedAnswer = null;
         _isAnswerChecked = false;
+        _hasErrored = false; // Reseta o estado do erro para a nova pergunta
       });
     }
   }
@@ -70,10 +73,11 @@ class _LessonScreenState extends State<LessonScreen> {
 
   Future<void> _handleContinue(bool isCorrect) async {
     if (!isCorrect) {
-      // Se errou, reseta para tentar de novo (não avança)
+      // Se errou, marca que errou e reseta para tentar de novo
       setState(() {
         _selectedAnswer = null;
         _isAnswerChecked = false;
+        _hasErrored = true; // Marca que o erro ocorreu
       });
       return;
     }
@@ -84,9 +88,8 @@ class _LessonScreenState extends State<LessonScreen> {
 
     try {
       if (_isLastQuestion) {
-        // --- FINALIZANDO ---
+        // FINALIZANDO
         setState(() => _isFinishing = true);
-
         await scoreProvider.addScore(10);
         await scoreProvider.completeLesson(widget.lesson.id);
 
@@ -94,7 +97,7 @@ class _LessonScreenState extends State<LessonScreen> {
           _showCompletionDialog();
         }
       } else {
-        // --- PRÓXIMA ---
+        // PRÓXIMA
         setState(() => _isFinishing = true);
         await scoreProvider.addScore(10);
         _nextQuestion();
@@ -105,6 +108,35 @@ class _LessonScreenState extends State<LessonScreen> {
       if (mounted) setState(() => _isFinishing = false);
     }
   }
+
+  // --- FUNÇÃO MOSTRA DICA ---
+  void _showHintDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.lightbulb_outline, color: Colors.amber),
+              SizedBox(width: 10),
+              Text('Dica para a Resposta'),
+            ],
+          ),
+          content: Text(
+            _currentQuestion.hintText ?? 'Não há dicas disponíveis para esta pergunta. Tente revisar o módulo.',
+            style: const TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text('Entendi!', style: TextStyle(color: _mainPurple)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   // --- DIALOG DE VITÓRIA (COM O DUKE) ---
   void _showCompletionDialog() {
@@ -120,7 +152,7 @@ class _LessonScreenState extends State<LessonScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Avatar do Duke (Placeholder Dourado ou Imagem)
+                // Avatar do Duke
                 Container(
                   height: 140,
                   width: 140,
@@ -132,8 +164,6 @@ class _LessonScreenState extends State<LessonScreen> {
                   child: Image.asset(
                     'assets/images/duck.png',
                     fit: BoxFit.contain,
-                    // Se não tiver a imagem, o flutter mostra um espaço vazio,
-                    // então coloque um Icon de fallback se quiser:
                     errorBuilder: (context, error, stackTrace) =>
                     const Icon(Icons.emoji_events_rounded, size: 60, color: Colors.amber),
                   ),
@@ -209,14 +239,14 @@ class _LessonScreenState extends State<LessonScreen> {
           icon: Icon(Icons.close_rounded, color: Colors.grey[400], size: 32),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        // Barra de progresso no topo (Grossa e arredondada)
+        // Barra de progresso no topo
         title: ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: LinearProgressIndicator(
             value: progress,
-            minHeight: 12, // Mais grossa
+            minHeight: 12,
             backgroundColor: Colors.grey[200],
-            valueColor: AlwaysStoppedAnimation<Color>(_correctGreen), // Verde de progresso
+            valueColor: AlwaysStoppedAnimation<Color>(_correctGreen),
           ),
         ),
         centerTitle: true,
@@ -247,7 +277,7 @@ class _LessonScreenState extends State<LessonScreen> {
                     textAlign: TextAlign.left,
                     style: const TextStyle(
                       fontSize: 22,
-                      fontWeight: FontWeight.w900, // Fonte bem pesada
+                      fontWeight: FontWeight.w900,
                       color: Color(0xFF2B2B2B),
                       height: 1.3,
                     ),
@@ -263,39 +293,58 @@ class _LessonScreenState extends State<LessonScreen> {
             ),
           ),
 
-          // Botão de Verificar (Só aparece se ainda não verificou)
-          if (!_isAnswerChecked)
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _checkAnswer,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _mainPurple, // Roxo principal
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+          // --- ÁREA INFERIOR DE AÇÃO ---
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              child: Row(
+                children: [
+                  // 1. LÂMPADA DE DICA (SÓ APARECE SE JÁ TENTOU E ERROU)
+                  if (_hasErrored && !_isAnswerChecked)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 16.0),
+                      child: Tooltip(
+                        message: 'Ver Dica',
+                        child: IconButton(
+                          icon: const Icon(Icons.lightbulb_outline, color: Colors.amber, size: 32),
+                          onPressed: _showHintDialog,
+                        ),
                       ),
                     ),
-                    child: const Text(
-                      'VERIFICAR',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
+
+                  // 2. BOTÃO PRINCIPAL (VERIFICAR / CONTINUAR)
+                  Expanded(
+                    child: SizedBox(
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _isAnswerChecked ? null : _checkAnswer,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _mainPurple,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          // Botão fica cinza se a resposta já foi checada
+                          disabledBackgroundColor: _mainPurple.withOpacity(0.5),
+                        ),
+                        child: const Text(
+                          'VERIFICAR',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
+          ),
         ],
       ),
-      // BottomSheet de Feedback (Sobe quando verifica)
       bottomSheet: _isAnswerChecked ? _buildFeedbackSheet() : null,
     );
   }
@@ -303,13 +352,11 @@ class _LessonScreenState extends State<LessonScreen> {
   Widget _buildAnswerOption(Answer answer) {
     final bool isSelected = _selectedAnswer == answer;
 
-    // Cores Padrão (Neutro)
     Color borderColor = Colors.grey[300]!;
     Color bgColor = Colors.white;
     Color textColor = const Color(0xFF4B4B4B);
     double borderWidth = 2.0;
 
-    // Cores de Feedback
     if (_isAnswerChecked) {
       if (isSelected) {
         if (answer.isCorrect) {
@@ -322,16 +369,14 @@ class _LessonScreenState extends State<LessonScreen> {
           textColor = _wrongRed;
         }
       } else {
-        // Não selecionados ficam apagadinhos
         borderColor = Colors.grey[200]!;
         textColor = Colors.grey[400]!;
       }
     } else if (isSelected) {
-      // Selecionado (Pré-verificação)
-      borderColor = _mainPurple; // Borda Roxa
-      bgColor = _mainPurple.withOpacity(0.08); // Fundo lilás bem claro
-      textColor = _mainPurple; // Texto roxo
-      borderWidth = 3.0; // Borda mais grossa
+      borderColor = _mainPurple;
+      bgColor = _mainPurple.withOpacity(0.08);
+      textColor = _mainPurple;
+      borderWidth = 3.0;
     }
 
     return GestureDetector(
@@ -350,7 +395,6 @@ class _LessonScreenState extends State<LessonScreen> {
         ),
         child: Row(
           children: [
-            // Círculo indicador (A, B, C ou Check)
             Container(
               width: 28,
               height: 28,
