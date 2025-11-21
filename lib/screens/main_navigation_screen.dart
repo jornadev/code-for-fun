@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:code_for_fun/screens/home_screen.dart';
+import 'package:code_for_fun/screens/ranking_screen.dart';
 import 'package:code_for_fun/screens/profile_screen.dart';
 import 'package:code_for_fun/screens/settings_screen.dart';
-import 'package:code_for_fun/screens/ranking_screen.dart';
+import 'package:code_for_fun/screens/achievements_screen.dart'; // IMPORT NECESSÁRIO
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -14,12 +15,15 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
-  // AQUI FOI A MUDANÇA:
-  // ProfileScreen() não é mais 'const' porque agora tem lógica de banco de dados dentro.
+  // Cor Roxo Principal para destaque
+  final Color _mainPurple = const Color(0xFF673AB7);
+
+  // Lista de telas com a nova ordem: Home, Ranking, Conquistas, Perfil, Ajustes
   static final List<Widget> _screens = <Widget>[
     const HomeScreen(),
     const RankingScreen(),
-    ProfileScreen(), // <--- Removi o 'const' aqui
+    const AchievementsScreen(), // NOVO: Conquistas
+    ProfileScreen(),
     const SettingsScreen(),
   ];
 
@@ -28,6 +32,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     null,
     null,
     null,
+    null, // Mantenho 5 nulls, um para cada tela
   ];
 
   void _onItemTapped(int index) {
@@ -41,14 +46,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final Color selectedColor = theme.colorScheme.secondary;
+    final Color selectedColor = _mainPurple; // Roxo Principal
     final Color unselectedColor =
         theme.iconTheme.color?.withOpacity(0.5) ?? Colors.grey;
     final Color navBackground =
         theme.bottomAppBarTheme.color ??
-            (isDark ? const Color(0xFF121212) : Colors.white);
+            (isDark ? const Color(0xFF1B1B1E) : Colors.white);
 
     return Scaffold(
+      // Usamos a lista de AppBars com 5 itens
       appBar: _appBars[_selectedIndex],
       body: IndexedStack(
         index: _selectedIndex,
@@ -67,6 +73,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.emoji_events),
             label: 'Ranking',
+          ),
+          // NOVO ITEM: CONQUISTAS
+          BottomNavigationBarItem(
+            icon: Icon(Icons.workspace_premium_rounded),
+            label: 'Conquistas',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),

@@ -8,109 +8,157 @@ import 'package:code_for_fun/constants/app_colors.dart';
 import 'package:code_for_fun/providers/score_provider.dart';
 import 'package:code_for_fun/providers/theme_provider.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
-  // Cor Roxa Principal (Deep Purple) - Mesma do Ranking e Perfil
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  // Cor Roxa Principal (Deep Purple)
   final Color _mainPurple = const Color(0xFF673AB7);
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color textColor =
-        Theme.of(context).textTheme.bodyLarge?.color ?? Colors.white;
 
-    return ListView(
-      padding: const EdgeInsets.all(24.0),
-      children: [
-        const SizedBox(height: 60),
+    // Detecta o tema para ajustar cores da lista
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetColor = isDark ? const Color(0xFF1B1B1E) : Colors.white;
+    final textColor = isDark ? Colors.white : AppColors.textDark;
 
-        // Título
-        Text(
-          'Ajustes',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: textColor,
+    return Scaffold(
+      backgroundColor: _mainPurple, // Fundo Roxo no topo
+      body: Column(
+        children: [
+          // --- CABEÇALHO ROXO (Apenas Título) ---
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 30, bottom: 30),
+              child: Center(
+                child: Text(
+                  'Ajustes',
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
 
-        // ---------- Aparência ----------
-        _buildSectionTitle('Aparência', textColor),
-        _buildSettingsTile(
-          context,
-          icon: Icons.brightness_6_outlined,
-          title: themeProvider.isDarkTheme ? 'Modo Claro' : 'Modo Escuro',
-          onTap: () {
-            themeProvider.toggleTheme();
-          },
-        ),
+          // --- CORPO (LISTA EM CONTAINER ARREDONDADO) ---
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: sheetColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                ),
+              ),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(24, 40, 24, 40),
+                children: [
+                  // 1. ---------- Aparência ----------
+                  _buildSectionTitle('Aparência', textColor),
+                  _buildSettingsTile(
+                    context,
+                    icon: Icons.brightness_6_outlined,
+                    title: themeProvider.isDarkTheme ? 'Modo Claro' : 'Modo Escuro',
+                    onTap: () => themeProvider.toggleTheme(),
+                    isDark: isDark,
+                    textColor: textColor,
+                  ),
 
-        const SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
-        // ---------- Conta ----------
-        _buildSectionTitle('Conta', textColor),
-        _buildSettingsTile(
-          context,
-          icon: Icons.person_outline,
-          title: 'Editar Nome',
-          onTap: () => _showEditNameDialog(context),
-        ),
-        _buildSettingsTile(
-          context,
-          icon: Icons.lock_outline,
-          title: 'Mudar Senha',
-          onTap: () => _sendPasswordReset(context),
-        ),
+                  // 2. ---------- Conta e Segurança ----------
+                  _buildSectionTitle('Conta e Segurança', textColor),
+                  _buildSettingsTile(
+                    context,
+                    icon: Icons.person_outline,
+                    title: 'Editar Nome',
+                    onTap: () => _showEditNameDialog(context),
+                    isDark: isDark,
+                    textColor: textColor,
+                  ),
+                  _buildSettingsTile(
+                    context,
+                    icon: Icons.lock_outline,
+                    title: 'Mudar Senha',
+                    onTap: () => _sendPasswordReset(context),
+                    isDark: isDark,
+                    textColor: textColor,
+                  ),
+                  // LOGOUT MOVIDO PARA CÁ
+                  _buildSettingsTile(
+                    context,
+                    icon: Icons.logout,
+                    title: 'Sair',
+                    onTap: () => _logout(context),
+                    isDark: isDark,
+                    textColor: textColor,
+                  ),
 
-        const SizedBox(height: 10),
 
-        // ---------- Informações ----------
-        _buildSectionTitle('Mais Informações', textColor),
-        _buildSettingsTile(
-          context,
-          icon: Icons.info_outline,
-          title: 'Sobre o App',
-          onTap: () => _showAboutDialog(context),
-        ),
+                  const SizedBox(height: 10),
 
-        const SizedBox(height: 20),
+                  // 3. ---------- Informações ----------
+                  _buildSectionTitle('Informações', textColor),
+                  _buildSettingsTile(
+                    context,
+                    icon: Icons.info_outline,
+                    title: 'Sobre o App',
+                    onTap: () => _showAboutDialog(context),
+                    isDark: isDark,
+                    textColor: textColor,
+                  ),
 
-        // ---------- Ações perigosas (Mantemos Vermelho para Alerta) ----------
-        _buildDestructiveTile(
-          context,
-          icon: Icons.restart_alt,
-          title: 'Resetar Progresso',
-          onTap: () => _showResetConfirmationDialog(context),
-        ),
-        _buildDestructiveTile(
-          context,
-          icon: Icons.logout,
-          title: 'Sair',
-          onTap: () => _logout(context),
-        ),
-        _buildDestructiveTile(
-          context,
-          icon: Icons.delete_forever,
-          title: 'Excluir Conta',
-          onTap: () => _showDeleteAccountDialog(context),
-        ),
-      ],
+                  const SizedBox(height: 30),
+
+                  // 4. ---------- Ações Destrutivas (APENAS RESETAR/EXCLUIR) ----------
+                  _buildSectionTitle('Ações Destrutivas', textColor),
+                  _buildDestructiveTile(
+                    context,
+                    icon: Icons.restart_alt,
+                    title: 'Resetar Progresso',
+                    onTap: () => _showResetConfirmationDialog(context),
+                    isDark: isDark,
+                  ),
+                  _buildDestructiveTile(
+                    context,
+                    icon: Icons.delete_forever,
+                    title: 'Excluir Conta',
+                    onTap: () => _showDeleteAccountDialog(context),
+                    isDark: isDark,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  // ====== WIDGETS AUXILIARES ======
+  // ====== WIDGETS AUXILIARES E FUNÇÕES (MANTIDOS IGUAIS) ======
 
   Widget _buildSectionTitle(String title, Color textColor) {
     return Padding(
-      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0, top: 18),
+      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0, top: 10),
       child: Text(
         title,
         style: TextStyle(
           color: textColor.withOpacity(0.6),
-          fontSize: 15,
+          fontSize: 14,
           fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
         ),
       ),
     );
@@ -121,24 +169,29 @@ class SettingsScreen extends StatelessWidget {
         required IconData icon,
         required String title,
         required VoidCallback onTap,
+        required bool isDark,
+        required Color textColor,
       }) {
-    final Color textColor =
-        Theme.of(context).textTheme.bodyLarge?.color ?? Colors.white;
+    final cardBg = isDark ? const Color(0xFF2A2A2D) : Colors.white;
+    final borderColor = isDark ? Colors.white10 : Colors.grey.shade200;
 
     return Card(
-      elevation: 1,
+      elevation: isDark ? 0 : 1,
+      color: cardBg,
       margin: const EdgeInsets.symmetric(vertical: 6),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: borderColor),
+      ),
       child: ListTile(
-        // Aqui mudamos de Orange para _mainPurple
         leading: Icon(icon, color: _mainPurple),
         title: Text(
           title,
-          style: TextStyle(color: textColor),
+          style: TextStyle(color: textColor, fontWeight: FontWeight.w500),
         ),
         trailing: Icon(
           Icons.chevron_right,
-          color: textColor.withOpacity(0.5),
+          color: textColor.withOpacity(0.4),
         ),
         onTap: onTap,
       ),
@@ -150,10 +203,15 @@ class SettingsScreen extends StatelessWidget {
         required IconData icon,
         required String title,
         required VoidCallback onTap,
+        required bool isDark,
       }) {
+    final cardBg = isDark
+        ? AppColors.red.withOpacity(0.15)
+        : AppColors.red.withOpacity(0.05);
+
     return Card(
       elevation: 0,
-      color: AppColors.red.withOpacity(0.08),
+      color: cardBg,
       margin: const EdgeInsets.symmetric(vertical: 6),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -163,14 +221,12 @@ class SettingsScreen extends StatelessWidget {
         leading: Icon(icon, color: AppColors.red),
         title: Text(
           title,
-          style: const TextStyle(color: AppColors.red),
+          style: const TextStyle(color: AppColors.red, fontWeight: FontWeight.bold),
         ),
         onTap: onTap,
       ),
     );
   }
-
-  // ====== FUNÇÕES LÓGICAS ======
 
   void _showEditNameDialog(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -194,7 +250,7 @@ class SettingsScreen extends StatelessWidget {
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: _mainPurple), // Botão Roxo
+              style: ElevatedButton.styleFrom(backgroundColor: _mainPurple),
               onPressed: () async {
                 final newName = nameController.text.trim();
                 if (newName.isNotEmpty) {
@@ -287,7 +343,6 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  // RESETAR PROGRESSO
   void _showResetConfirmationDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -342,7 +397,6 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  // SAIR (LOGOUT)
   void _logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
 
@@ -354,7 +408,6 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
-  // EXCLUIR CONTA
   void _showDeleteAccountDialog(BuildContext context) {
     showDialog(
       context: context,

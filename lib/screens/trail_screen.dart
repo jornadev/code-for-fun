@@ -23,6 +23,7 @@ class _TrailScreenState extends State<TrailScreen> {
 
   // Cor Principal (Roxo Deep Purple)
   final Color _mainPurple = const Color(0xFF673AB7);
+  final Color _darkBackgroundGray = const Color(0xFF2B2B2B);
 
   Set<String> _completedLessonIds = {};
   bool _isLoadingUserData = true;
@@ -58,14 +59,14 @@ class _TrailScreenState extends State<TrailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Pega a cor de fundo padrão do tema (geralmente aquele cinza claro ou branco)
-    final theme = Theme.of(context);
-    final backgroundColor = theme.scaffoldBackgroundColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final listBgColor = isDark ? _darkBackgroundGray : Colors.white;
 
     return Scaffold(
-      backgroundColor: backgroundColor, // Fundo limpo
+      backgroundColor: _mainPurple, // Fundo principal é roxo
       appBar: AppBar(
-        backgroundColor: _mainPurple, // Apenas o topo é Roxo
+        backgroundColor: _mainPurple, // Topo Roxo
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
@@ -82,60 +83,135 @@ class _TrailScreenState extends State<TrailScreen> {
         ),
         centerTitle: true,
       ),
-      body: _isLoadingUserData
-          ? Center(child: CircularProgressIndicator(color: _mainPurple))
-          : StreamBuilder<List<Lesson>>(
-        stream: _trailService.getLessons(widget.trail.id),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator(color: _mainPurple));
-          }
-
-          final lessons = snapshot.data ?? [];
-
-          if (lessons.isEmpty) {
-            return Center(
-              child: Text(
-                'Em breve novas aulas!',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            );
-          }
-
-          int unlockedIndex = 0;
-          for (int i = 0; i < lessons.length; i++) {
-            if (!_completedLessonIds.contains(lessons[i].id)) {
-              unlockedIndex = i;
-              break;
+      body: Container(
+        color: listBgColor, // Fundo da lista
+        child: _isLoadingUserData
+            ? Center(child: CircularProgressIndicator(color: _mainPurple))
+            : StreamBuilder<List<Lesson>>(
+          stream: _trailService.getLessons(widget.trail.id),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator(color: _mainPurple));
             }
-            if (i == lessons.length - 1) unlockedIndex = lessons.length;
-          }
 
-          return ListView.builder(
-            padding: const EdgeInsets.only(top: 40, bottom: 100),
-            itemCount: lessons.length,
-            itemBuilder: (context, index) {
-              final lesson = lessons[index];
+            final lessons = snapshot.data ?? [];
 
-              final bool isCompleted = _completedLessonIds.contains(lesson.id);
-              final bool isCurrent = (index == unlockedIndex);
-              final bool isLocked = index > unlockedIndex;
-
-              return _buildPathNode(
-                context,
-                index,
-                lessons.length,
-                lesson,
-                isCompleted,
-                isCurrent,
-                isLocked,
+            if (lessons.isEmpty) {
+              return Center(
+                child: Text(
+                  'Em breve novas aulas!',
+                  style: TextStyle(color: isDark ? Colors.white70 : Colors.grey[600]),
+                ),
               );
-            },
-          );
-        },
+            }
+
+            int unlockedIndex = 0;
+            for (int i = 0; i < lessons.length; i++) {
+              if (!_completedLessonIds.contains(lessons[i].id)) {
+                unlockedIndex = i;
+                break;
+              }
+              if (i == lessons.length - 1) unlockedIndex = lessons.length;
+            }
+
+            final bool isTrailCompleted = unlockedIndex == lessons.length;
+
+            return ListView.builder(
+              padding: const EdgeInsets.only(top: 40, bottom: 100),
+              // O itemCount é +1 para a Linha de Chegada
+              itemCount: lessons.length + 1,
+              itemBuilder: (context, index) {
+
+                if (index < lessons.length) {
+                  // NÓS DA LIÇÃO
+                  final lesson = lessons[index];
+
+                  final bool isCompleted = _completedLessonIds.contains(lesson.id);
+                  final bool isCurrent = (index == unlockedIndex);
+                  final bool isLocked = index > unlockedIndex;
+
+                  return _buildPathNode(
+                    context,
+                    index,
+                    lessons.length,
+                    lesson,
+                    isCompleted,
+                    isCurrent,
+                    isLocked,
+                    isDark,
+                  );
+                } else {
+                  // LINHA DE CHEGADA (Sempre aparece no final)
+                  return _buildFinishLine(context, isTrailCompleted, isDark);
+                }
+              },
+            );
+          },
+        ),
       ),
     );
   }
+
+  // --- WIDGET DA LINHA DE CHEGADA ---
+  Widget _buildFinishLine(BuildContext context, bool isTrailCompleted, bool isDark) {
+    final Color trophyColor = isTrailCompleted ? Colors.amber : Colors.grey;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 40, bottom: 40),
+      child: Center(
+        child: Column(
+          children: [
+            // Troféu Principal
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: isTrailCompleted ? _mainPurple : Colors.grey.shade400,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: isTrailCompleted ? Colors.amber.withOpacity(0.5) : Colors.black.withOpacity(0.2),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Icon(
+                  Icons.workspace_premium_rounded,
+                  color: isTrailCompleted ? Colors.white : Colors.grey.shade600,
+                  size: 70
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            Text(
+              isTrailCompleted ? 'TRILHA CONCLUÍDA!' : 'LINHA DE CHEGADA',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: isTrailCompleted ? _mainPurple : (isDark ? Colors.white : AppColors.textDark),
+                letterSpacing: 1.2,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              isTrailCompleted
+                  ? 'Parabéns! Você é um Mestre em ${widget.trail.title}.'
+                  : 'Complete todos os módulos para conquistar este troféu!',
+              style: TextStyle(
+                fontSize: 16,
+                color: isDark ? Colors.white70 : Colors.grey[700],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildPathNode(
       BuildContext context,
@@ -145,11 +221,14 @@ class _TrailScreenState extends State<TrailScreen> {
       bool isCompleted,
       bool isCurrent,
       bool isLocked,
+      bool isDark,
       ) {
     // Curva Zig-Zag
     final double xOffset = math.sin(index * 2.5) * 80.0;
 
-    // --- PALETA DE CORES ---
+    final cardTitleBg = isDark ? const Color(0xFF3A3A3A) : Colors.white;
+
+    // --- PALETA DE CORES DINÂMICA ---
     Color circleColor;
     Color shadowColor;
     Color iconColor;
@@ -163,17 +242,17 @@ class _TrailScreenState extends State<TrailScreen> {
       iconColor = Colors.white;
       iconData = Icons.star_rounded;
     } else if (isCurrent) {
-      // Atual: Roxo Principal (Destaque no fundo claro)
+      // Atual: Roxo Principal (Destaque)
       circleColor = _mainPurple;
-      shadowColor = const Color(0xFF4527A0); // Roxo mais escuro para sombra
+      shadowColor = const Color(0xFF4527A0);
       iconColor = Colors.white;
       iconData = Icons.play_arrow_rounded;
-      buttonSize = 90.0; // Maior para chamar atenção
+      buttonSize = 90.0;
     } else {
-      // Bloqueada: Cinza
-      circleColor = Colors.grey[300]!;
-      shadowColor = Colors.grey[400]!;
-      iconColor = Colors.grey[500]!;
+      // Bloqueada: Cinza Escuro (No Dark Mode) ou Cinza Claro (No Light Mode)
+      circleColor = isDark ? const Color(0xFF424242) : Colors.grey[300]!;
+      shadowColor = isDark ? Colors.black54 : Colors.grey[400]!;
+      iconColor = isDark ? Colors.white30 : Colors.grey[500]!;
       iconData = Icons.lock;
     }
 
@@ -185,11 +264,11 @@ class _TrailScreenState extends State<TrailScreen> {
           alignment: Alignment.center,
           children: [
             // 1. LINHA CONECTORA
-            if (index < totalLength - 1)
+            if (index < totalLength) // A linha deve se conectar à Linha de Chegada
               Transform.translate(
                 offset: Offset(
                     (xOffset + (math.sin((index + 1) * 2.5) * 80.0)) / 2,
-                    60 // Ajuste vertical
+                    60
                 ),
                 child: Transform.rotate(
                   angle: -math.atan(
@@ -201,7 +280,7 @@ class _TrailScreenState extends State<TrailScreen> {
                     decoration: BoxDecoration(
                       color: isCompleted
                           ? Colors.amber.withOpacity(0.5)
-                          : Colors.grey.withOpacity(0.3), // Linha cinza suave se não completou
+                          : isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.3),
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),
@@ -230,16 +309,15 @@ class _TrailScreenState extends State<TrailScreen> {
                   const SizedBox(height: 8),
 
                   // Título da Lição
-                  // Agora usamos texto escuro pois o fundo é claro
                   if (!isLocked || isCurrent)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: cardTitleBg, // Fundo adaptável
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
                               blurRadius: 6,
                               offset: const Offset(0, 3),
                             )
@@ -250,7 +328,10 @@ class _TrailScreenState extends State<TrailScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: isCurrent ? _mainPurple : AppColors.textDark,
+                          // Cor do texto
+                          color: isCurrent
+                              ? _mainPurple
+                              : isDark ? Colors.white : AppColors.textDark,
                         ),
                         textAlign: TextAlign.center,
                         maxLines: 1,
@@ -261,13 +342,13 @@ class _TrailScreenState extends State<TrailScreen> {
               ),
             ),
 
-            // 3. ELEMENTOS DECORATIVOS (Ícones cinzas no fundo claro)
+            // 3. ELEMENTOS DECORATIVOS (Ícones no fundo)
             if (index % 3 == 0 && index > 0)
               Transform.translate(
                 offset: Offset(-xOffset * 1.8, -30),
                 child: Icon(
                   Icons.star,
-                  color: Colors.grey.withOpacity(0.15), // Cinza bem clarinho
+                  color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey.withOpacity(0.15),
                   size: 40,
                 ),
               ),
