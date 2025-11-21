@@ -13,13 +13,21 @@ class RankingScreen extends StatefulWidget {
 class _RankingScreenState extends State<RankingScreen> {
   final String? _currentUserUid = FirebaseAuth.instance.currentUser?.uid;
 
-  // Cor Roxa Principal (A mesma usada na TrailScreen para lições completas)
-  final Color _mainPurple = const Color(0xFF8E24AA);
+  // Cor Roxa Principal
+  final Color _mainPurple = const Color(0xFF673AB7);
 
   @override
   Widget build(BuildContext context) {
+    // 1. DETECTA O TEMA
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // 2. DEFINE AS CORES COM BASE NO TEMA
+    // Fundo da lista: Branco no modo claro, Cinza escuro no modo noturno
+    final sheetColor = isDark ? const Color(0xFF1B1B1E) : Colors.white;
+    final textColor = isDark ? Colors.white : AppColors.textDark;
+
     return Scaffold(
-      backgroundColor: _mainPurple,
+      backgroundColor: _mainPurple, // O fundo do topo continua Roxo (Identidade do app)
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('users')
@@ -27,12 +35,12 @@ class _RankingScreenState extends State<RankingScreen> {
             .limit(50)
             .snapshots(),
         builder: (context, snapshot) {
-          // 1. Loading
+          // Loading
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: Colors.white));
           }
 
-          // 2. Erro
+          // Erro
           if (snapshot.hasError) {
             return Center(
               child: Text(
@@ -44,7 +52,7 @@ class _RankingScreenState extends State<RankingScreen> {
 
           final docs = snapshot.data?.docs ?? [];
 
-          // 3. Vazio
+          // Vazio
           if (docs.isEmpty) {
             return const Center(
               child: Text(
@@ -55,18 +63,11 @@ class _RankingScreenState extends State<RankingScreen> {
             );
           }
 
-          // Lógica de Separação (Pódio vs Lista)
+          // Separa os Top 3 para o Pódio
           List<QueryDocumentSnapshot> top3 = [];
-          List<QueryDocumentSnapshot> others = [];
-
-          if (docs.length > 0) top3.add(docs[0]); // 1º
-          if (docs.length > 1) top3.add(docs[1]); // 2º
-          if (docs.length > 2) top3.add(docs[2]); // 3º
-
-          // Todo mundo a partir do 4º lugar vai para a lista
-          if (docs.length > 3) {
-            others = docs.sublist(3);
-          }
+          if (docs.length > 0) top3.add(docs[0]);
+          if (docs.length > 1) top3.add(docs[1]);
+          if (docs.length > 2) top3.add(docs[2]);
 
           return Column(
             children: [
@@ -93,35 +94,23 @@ class _RankingScreenState extends State<RankingScreen> {
                 ),
               ),
 
-              // --- LISTA DE USUÁRIOS (CARD BRANCO) ---
+              // --- LISTA DE USUÁRIOS (ADAPTÁVEL) ---
               Expanded(
                 child: Container(
                   width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
+                  decoration: BoxDecoration(
+                    color: sheetColor, // <--- Cor adaptável (Branco ou Dark)
+                    borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
                     ),
                   ),
-                  child: others.isEmpty
-                      ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Text(
-                        docs.length <= 3
-                            ? "Chegue ao topo para aparecer aqui!"
-                            : "Fim da lista",
-                        style: TextStyle(color: Colors.grey[400]),
-                      ),
-                    ),
-                  )
-                      : ListView.builder(
+                  child: ListView.builder(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-                    itemCount: others.length,
+                    itemCount: docs.length, // Mostra TODOS os usuários
                     itemBuilder: (context, index) {
-                      // Calcula a posição real (Índice da lista + 4, pois 1,2,3 já foram)
-                      return _buildListItem(context, others[index], index + 4);
+                      // Passamos 'isDark' para pintar o card corretamente
+                      return _buildListItem(context, docs[index], index + 1, isDark);
                     },
                   ),
                 ),
@@ -133,7 +122,7 @@ class _RankingScreenState extends State<RankingScreen> {
     );
   }
 
-  // --- PÓDIO (TOP 3) ---
+  // --- WIDGETS DO PÓDIO ---
   Widget _buildPodium(BuildContext context, List<QueryDocumentSnapshot> top3) {
     if (top3.isEmpty) return const SizedBox.shrink();
 
@@ -154,7 +143,7 @@ class _RankingScreenState extends State<RankingScreen> {
         else
           const Spacer(),
 
-        // 1º Lugar (Centro - Maior)
+        // 1º Lugar
         Expanded(
           flex: 2,
           child: _buildPodiumItem(
@@ -192,20 +181,16 @@ class _RankingScreenState extends State<RankingScreen> {
     final data = doc.data() as Map<String, dynamic>;
     final String name = data['displayName']?.toString() ?? 'Anônimo';
     final int score = (data['score'] as num?)?.toInt() ?? 0;
-
-    // Pega a inicial do nome para o avatar
     final String initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Coroa no 1º lugar
         if (isFirst)
           const Icon(Icons.emoji_events, color: Color(0xFFFFD700), size: 32),
 
         const SizedBox(height: 8),
 
-        // Avatar Circular
         Container(
           decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -224,7 +209,7 @@ class _RankingScreenState extends State<RankingScreen> {
             child: Text(
               initial,
               style: TextStyle(
-                color: _mainPurple, // Letra roxa para combinar
+                color: _mainPurple,
                 fontWeight: FontWeight.bold,
                 fontSize: isFirst ? 24 : 18,
               ),
@@ -234,9 +219,8 @@ class _RankingScreenState extends State<RankingScreen> {
 
         const SizedBox(height: 8),
 
-        // Nome
         Text(
-          name.split(' ').first, // Só o primeiro nome
+          name.split(' ').first,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -245,7 +229,6 @@ class _RankingScreenState extends State<RankingScreen> {
           overflow: TextOverflow.ellipsis,
         ),
 
-        // Pontos
         Text(
           '$score pts',
           style: TextStyle(
@@ -256,12 +239,11 @@ class _RankingScreenState extends State<RankingScreen> {
 
         const SizedBox(height: 8),
 
-        // Barra do Pódio
         Container(
           width: double.infinity,
           height: height * 0.4,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.3), // Transparente para ficar sutil
+            color: color.withOpacity(0.3),
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(8),
               topRight: Radius.circular(8),
@@ -286,8 +268,8 @@ class _RankingScreenState extends State<RankingScreen> {
     );
   }
 
-  // --- ITEM DA LISTA (4º lugar em diante) ---
-  Widget _buildListItem(BuildContext context, QueryDocumentSnapshot doc, int position) {
+  // --- ITEM DA LISTA (ADAPTADO PARA DARK MODE) ---
+  Widget _buildListItem(BuildContext context, QueryDocumentSnapshot doc, int position, bool isDark) {
     final data = doc.data() as Map<String, dynamic>;
     final bool isCurrentUser = doc.id == _currentUserUid;
 
@@ -295,20 +277,36 @@ class _RankingScreenState extends State<RankingScreen> {
     final int score = (data['score'] as num?)?.toInt() ?? 0;
     final String initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
+    // Cor do número da posição
+    Color positionColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+    if (position == 1) positionColor = const Color(0xFFFFD700);
+    if (position == 2) positionColor = const Color(0xFFC0C0C0);
+    if (position == 3) positionColor = const Color(0xFFCD7F32);
+
+    // CORES ADAPTÁVEIS DO CARD
+    final cardColor = isDark
+        ? (isCurrentUser ? const Color(0xFF311B92) : const Color(0xFF2A2A2D))
+        : (isCurrentUser ? _mainPurple.withOpacity(0.05) : Colors.white);
+
+    final textColor = isCurrentUser
+        ? (isDark ? const Color(0xFFB39DDB) : _mainPurple)
+        : (isDark ? Colors.white : AppColors.textDark);
+
+    final borderColor = isCurrentUser
+        ? (isDark ? const Color(0xFF7E57C2) : _mainPurple)
+        : (isDark ? Colors.white10 : Colors.grey.shade200);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       decoration: BoxDecoration(
-        // Se for o usuário atual, destaca com um roxo bem clarinho
-        color: isCurrentUser ? _mainPurple.withOpacity(0.05) : Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: isCurrentUser
-            ? Border.all(color: _mainPurple, width: 1.5)
-            : Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: borderColor, width: isCurrentUser ? 1.5 : 1.0),
         boxShadow: [
           if (!isCurrentUser)
             BoxShadow(
-              color: Colors.grey.withOpacity(0.05),
+              color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -318,28 +316,28 @@ class _RankingScreenState extends State<RankingScreen> {
         leading: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Posição (#4, #5...)
+            // Posição
             SizedBox(
               width: 30,
               child: Text(
                 '$position',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade600,
+                  color: positionColor,
                 ),
               ),
             ),
             const SizedBox(width: 12),
-            // Avatar Pequeno
+            // Avatar
             CircleAvatar(
               radius: 22,
-              backgroundColor: _mainPurple.withOpacity(0.1),
+              backgroundColor: isDark ? _mainPurple.withOpacity(0.4) : _mainPurple.withOpacity(0.1),
               child: Text(
                 initial,
                 style: TextStyle(
-                  color: _mainPurple,
+                  color: isDark ? Colors.white : _mainPurple,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -350,7 +348,7 @@ class _RankingScreenState extends State<RankingScreen> {
           name,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: isCurrentUser ? _mainPurple : AppColors.textDark,
+            color: textColor,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -358,15 +356,15 @@ class _RankingScreenState extends State<RankingScreen> {
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: AppColors.inputGray,
+            color: isDark ? Colors.grey[800] : AppColors.inputGray,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
             '$score pts',
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 13,
-              color: AppColors.textDark,
+              color: isDark ? Colors.white70 : AppColors.textDark,
             ),
           ),
         ),

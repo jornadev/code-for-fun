@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Para excluir o documento do usuário
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:code_for_fun/screens/login_screen.dart';
 import 'package:code_for_fun/constants/app_colors.dart';
@@ -10,6 +10,9 @@ import 'package:code_for_fun/providers/theme_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  // Cor Roxa Principal (Deep Purple) - Mesma do Ranking e Perfil
+  final Color _mainPurple = const Color(0xFF673AB7);
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +77,7 @@ class SettingsScreen extends StatelessWidget {
 
         const SizedBox(height: 20),
 
-        // ---------- Ações perigosas ----------
+        // ---------- Ações perigosas (Mantemos Vermelho para Alerta) ----------
         _buildDestructiveTile(
           context,
           icon: Icons.restart_alt,
@@ -127,7 +130,8 @@ class SettingsScreen extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 6),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        leading: Icon(icon, color: Colors.orange),
+        // Aqui mudamos de Orange para _mainPurple
+        leading: Icon(icon, color: _mainPurple),
         title: Text(
           title,
           style: TextStyle(color: textColor),
@@ -190,14 +194,13 @@ class SettingsScreen extends StatelessWidget {
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: _mainPurple), // Botão Roxo
               onPressed: () async {
                 final newName = nameController.text.trim();
                 if (newName.isNotEmpty) {
                   try {
-                    // Atualiza no Auth
                     await user.updateDisplayName(newName);
 
-                    // Atualiza no Firestore também para consistência
                     await FirebaseFirestore.instance
                         .collection('users')
                         .doc(user.uid)
@@ -225,7 +228,7 @@ class SettingsScreen extends StatelessWidget {
                   }
                 }
               },
-              child: const Text('Salvar'),
+              child: const Text('Salvar', style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -275,6 +278,7 @@ class SettingsScreen extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(foregroundColor: _mainPurple),
               child: const Text('Fechar'),
             ),
           ],
@@ -305,7 +309,6 @@ class SettingsScreen extends StatelessWidget {
               onPressed: () async {
                 Navigator.of(dialogContext).pop();
                 try {
-                  // Chama o método novo do Provider que limpa Firebase + Local
                   await Provider.of<ScoreProvider>(context, listen: false)
                       .resetAccountProgress();
 
@@ -330,7 +333,7 @@ class SettingsScreen extends StatelessWidget {
               },
               child: const Text(
                 'Resetar',
-                style: TextStyle(color: AppColors.white),
+                style: TextStyle(color: Colors.white),
               ),
             ),
           ],
@@ -341,8 +344,6 @@ class SettingsScreen extends StatelessWidget {
 
   // SAIR (LOGOUT)
   void _logout(BuildContext context) async {
-    // Removemos o 'resetScore()' pois ele não existe no novo Provider
-    // e o logout do Firebase já é suficiente.
     await FirebaseAuth.instance.signOut();
 
     if (context.mounted) {
@@ -390,10 +391,7 @@ class SettingsScreen extends StatelessWidget {
     if (user == null) return;
 
     try {
-      // 1. Excluir dados do Firestore
       await FirebaseFirestore.instance.collection('users').doc(user.uid).delete();
-
-      // 2. Excluir usuário da Autenticação
       await user.delete();
 
       if (context.mounted) {
@@ -401,14 +399,12 @@ class SettingsScreen extends StatelessWidget {
           const SnackBar(content: Text('Conta excluída com sucesso.')),
         );
 
-        // Redirecionar para Login
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginScreen()),
               (Route<dynamic> route) => false,
         );
       }
     } on FirebaseAuthException catch (e) {
-      // Se o login for muito antigo, o Firebase pede para relogar antes de excluir
       if (e.code == 'requires-recent-login') {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

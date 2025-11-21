@@ -21,6 +21,9 @@ class _TrailScreenState extends State<TrailScreen> {
   final UserService _userService = UserService();
   final TrailService _trailService = TrailService();
 
+  // Cor Principal (Roxo Deep Purple)
+  final Color _mainPurple = const Color(0xFF673AB7);
+
   Set<String> _completedLessonIds = {};
   bool _isLoadingUserData = true;
 
@@ -55,42 +58,48 @@ class _TrailScreenState extends State<TrailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Pega a cor de fundo padrão do tema (geralmente aquele cinza claro ou branco)
     final theme = Theme.of(context);
     final backgroundColor = theme.scaffoldBackgroundColor;
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: backgroundColor, // Fundo limpo
       appBar: AppBar(
-        backgroundColor: backgroundColor,
+        backgroundColor: _mainPurple, // Apenas o topo é Roxo
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.close, color: theme.iconTheme.color),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           widget.trail.title.toUpperCase(),
-          style: TextStyle(
-            color: theme.textTheme.bodyLarge?.color?.withOpacity(0.7),
-            fontSize: 16,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
+            letterSpacing: 1.5,
           ),
         ),
         centerTitle: true,
       ),
       body: _isLoadingUserData
-          ? const Center(child: CircularProgressIndicator(color: Colors.purple)) // Loading roxo
+          ? Center(child: CircularProgressIndicator(color: _mainPurple))
           : StreamBuilder<List<Lesson>>(
         stream: _trailService.getLessons(widget.trail.id),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Colors.purple));
+            return Center(child: CircularProgressIndicator(color: _mainPurple));
           }
 
           final lessons = snapshot.data ?? [];
 
           if (lessons.isEmpty) {
-            return const Center(child: Text('Em breve novas aulas!'));
+            return Center(
+              child: Text(
+                'Em breve novas aulas!',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            );
           }
 
           int unlockedIndex = 0;
@@ -103,7 +112,7 @@ class _TrailScreenState extends State<TrailScreen> {
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.only(top: 20, bottom: 60),
+            padding: const EdgeInsets.only(top: 40, bottom: 100),
             itemCount: lessons.length,
             itemBuilder: (context, index) {
               final lesson = lessons[index];
@@ -137,73 +146,69 @@ class _TrailScreenState extends State<TrailScreen> {
       bool isCurrent,
       bool isLocked,
       ) {
+    // Curva Zig-Zag
     final double xOffset = math.sin(index * 2.5) * 80.0;
 
-    // --- PALETA DE CORES ROXA ---
+    // --- PALETA DE CORES ---
     Color circleColor;
     Color shadowColor;
     Color iconColor;
     IconData iconData;
-    double buttonSize = 70.0;
+    double buttonSize = 75.0;
 
     if (isCompleted) {
-      // Roxo Escuro / Conquistado
-      circleColor = const Color(0xFF8E24AA); // Roxo Médio (Purple 600)
-      shadowColor = const Color(0xFF4A148C); // Roxo Bem Escuro (Purple 900)
-      iconColor = Colors.amberAccent; // Estrela Dourada para contraste
+      // Completas: Dourado
+      circleColor = Colors.amber;
+      shadowColor = Colors.amber[800]!;
+      iconColor = Colors.white;
       iconData = Icons.star_rounded;
     } else if (isCurrent) {
-      // Roxo Vibrante / Ação
-      circleColor = const Color(0xFFE040FB); // Roxo Neon (PurpleAccent 100/200)
-      shadowColor = const Color(0xFFAA00FF); // Roxo Forte (PurpleAccent 700)
+      // Atual: Roxo Principal (Destaque no fundo claro)
+      circleColor = _mainPurple;
+      shadowColor = const Color(0xFF4527A0); // Roxo mais escuro para sombra
       iconColor = Colors.white;
       iconData = Icons.play_arrow_rounded;
-      buttonSize = 85.0; // Um pouco maior para destaque
+      buttonSize = 90.0; // Maior para chamar atenção
     } else {
-      // Bloqueado (Mantém cinza para não poluir)
+      // Bloqueada: Cinza
       circleColor = Colors.grey[300]!;
       shadowColor = Colors.grey[400]!;
       iconColor = Colors.grey[500]!;
       iconData = Icons.lock;
     }
 
-    if (Theme.of(context).brightness == Brightness.dark && isLocked) {
-      circleColor = const Color(0xFF2A2A2D);
-      shadowColor = Colors.black;
-      iconColor = Colors.grey[600]!;
-    }
-
     return Center(
       child: SizedBox(
         width: double.infinity,
-        height: 140,
+        height: 150,
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // LINHA CONECTORA
+            // 1. LINHA CONECTORA
             if (index < totalLength - 1)
               Transform.translate(
                 offset: Offset(
                     (xOffset + (math.sin((index + 1) * 2.5) * 80.0)) / 2,
-                    55
+                    60 // Ajuste vertical
                 ),
                 child: Transform.rotate(
                   angle: -math.atan(
                       (math.sin((index + 1) * 2.5) * 80.0 - xOffset) / 100
                   ),
                   child: Container(
-                    width: 12,
-                    height: 70,
+                    width: 10,
+                    height: 90,
                     decoration: BoxDecoration(
-                      // A linha fica roxa se já completou, cinza se não
-                      color: isCompleted ? const Color(0xFFBA68C8).withOpacity(0.5) : Colors.grey.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(6),
+                      color: isCompleted
+                          ? Colors.amber.withOpacity(0.5)
+                          : Colors.grey.withOpacity(0.3), // Linha cinza suave se não completou
+                      borderRadius: BorderRadius.circular(5),
                     ),
                   ),
                 ),
               ),
 
-            // BOTÃO 3D
+            // 2. O BOTÃO 3D
             Transform.translate(
               offset: Offset(xOffset, 0),
               child: Column(
@@ -224,27 +229,28 @@ class _TrailScreenState extends State<TrailScreen> {
 
                   const SizedBox(height: 8),
 
+                  // Título da Lição
+                  // Agora usamos texto escuro pois o fundo é claro
                   if (!isLocked || isCurrent)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                          color: Theme.of(context).cardColor,
-                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
                             )
                           ]
                       ),
                       child: Text(
                         lesson.title,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          // Se for o atual, o texto fica Roxo para combinar
-                          color: isCurrent ? const Color(0xFF8E24AA) : (isLocked ? Colors.grey : AppColors.textDark),
+                          color: isCurrent ? _mainPurple : AppColors.textDark,
                         ),
                         textAlign: TextAlign.center,
                         maxLines: 1,
@@ -255,14 +261,14 @@ class _TrailScreenState extends State<TrailScreen> {
               ),
             ),
 
-            // ÍCONE DECORATIVO (Escola/Troféu)
+            // 3. ELEMENTOS DECORATIVOS (Ícones cinzas no fundo claro)
             if (index % 3 == 0 && index > 0)
               Transform.translate(
-                offset: Offset(-xOffset * 1.8, -20),
+                offset: Offset(-xOffset * 1.8, -30),
                 child: Icon(
-                  Icons.emoji_events, // Troféu sutil ao fundo
-                  color: Colors.deepPurple.withOpacity(0.05), // Roxo bem clarinho
-                  size: 48,
+                  Icons.star,
+                  color: Colors.grey.withOpacity(0.15), // Cinza bem clarinho
+                  size: 40,
                 ),
               ),
           ],
@@ -272,6 +278,7 @@ class _TrailScreenState extends State<TrailScreen> {
   }
 }
 
+// --- WIDGET DO BOTÃO 3D ---
 class _GameButton3D extends StatefulWidget {
   final double size;
   final Color color;
@@ -300,7 +307,7 @@ class _GameButton3DState extends State<_GameButton3D> {
 
   @override
   Widget build(BuildContext context) {
-    final double topOffset = _isPressed ? 4.0 : 0.0;
+    final double topOffset = _isPressed ? 6.0 : 0.0;
     final double shadowHeight = 8.0;
 
     return GestureDetector(
@@ -319,7 +326,7 @@ class _GameButton3DState extends State<_GameButton3D> {
         height: widget.size + shadowHeight,
         child: Stack(
           children: [
-            // Sombra
+            // Sombra (Base)
             Positioned(
               bottom: 0,
               left: 0,
@@ -332,9 +339,9 @@ class _GameButton3DState extends State<_GameButton3D> {
                 ),
               ),
             ),
-            // Botão
+            // Botão (Topo)
             AnimatedPositioned(
-              duration: const Duration(milliseconds: 50),
+              duration: const Duration(milliseconds: 100),
               top: topOffset,
               left: 0,
               right: 0,
@@ -354,14 +361,14 @@ class _GameButton3DState extends State<_GameButton3D> {
             // Brilho
             if (!widget.isLocked && !_isPressed)
               Positioned(
-                top: 10,
-                left: 15,
+                top: widget.size * 0.15,
+                left: widget.size * 0.2,
                 child: Container(
-                  width: widget.size * 0.2,
-                  height: widget.size * 0.1,
+                  width: widget.size * 0.25,
+                  height: widget.size * 0.12,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                 ),
               ),

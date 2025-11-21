@@ -13,6 +13,9 @@ class ProfileScreen extends StatelessWidget {
   // Instanciamos o serviço para buscar os dados
   final TrailService _trailService = TrailService();
 
+  // Cor Roxa Principal (A mesma do Ranking)
+  final Color _mainPurple = const Color(0xFF673AB7);
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -57,14 +60,16 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
         ),
+
+        // Avatar Grande no Topo
         Center(
           child: CircleAvatar(
             radius: 60,
-            backgroundColor: Colors.orange.withOpacity(0.1),
-            child: const Icon(
+            backgroundColor: _mainPurple.withOpacity(0.1), // Fundo Roxo Claro
+            child: Icon(
               Icons.person,
               size: 80,
-              color: Colors.orange,
+              color: _mainPurple, // Ícone Roxo
             ),
           ),
         ),
@@ -119,7 +124,7 @@ class ProfileScreen extends StatelessWidget {
             }
 
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return Center(child: CircularProgressIndicator(color: _mainPurple));
             }
 
             final allTrails = snapshot.data ?? [];
@@ -233,12 +238,12 @@ class ProfileScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: trail.iconColor.withOpacity(0.12),
+                    color: _mainPurple.withOpacity(0.12), // Fundo Roxo Claro
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     trail.icon,
-                    color: trail.iconColor,
+                    color: _mainPurple, // Ícone Roxo
                     size: 28,
                   ),
                 ),
@@ -257,7 +262,7 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        trail.level, // Mudei de "X Lições" para apenas o Nível, pois a lista de lições vem vazia
+                        trail.level,
                         style: TextStyle(
                           color: textColor.withOpacity(0.7),
                           fontSize: 12,
@@ -281,8 +286,8 @@ class ProfileScreen extends StatelessWidget {
                     value: progress,
                     backgroundColor:
                     isDark ? Colors.grey[800] : Colors.grey[300],
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      Colors.orange,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _mainPurple, // Barra Roxa
                     ),
                     minHeight: 16,
                   ),
@@ -326,7 +331,7 @@ class ProfileScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            Icon(icon, color: Colors.orange, size: 28),
+            Icon(icon, color: _mainPurple, size: 28), // Ícones Roxos
             const SizedBox(width: 20),
             Expanded(
               child: Column(
