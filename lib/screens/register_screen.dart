@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:code_for_fun/constants/app_colors.dart';
+import 'package:code_for_fun/constants/app_colors.dart'; // Certifique-se de que AppColors está definido
 import 'package:code_for_fun/screens/login_screen.dart';
 import 'package:code_for_fun/screens/main_navigation_screen.dart';
 import 'package:code_for_fun/service/user_service.dart';
@@ -37,7 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: AppColors.red,
+        backgroundColor: AppColors.red, // Usa a cor de erro do seu AppColors
       ),
     );
   }
@@ -89,15 +89,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final textColor = theme.textTheme.bodyLarge?.color ?? AppColors.textDark;
+    // 💡 CORES FIXAS PARA MODO CLARO (IGNORA O TEMA GLOBAL)
+    const Color lightBackgroundColor = Colors.white;
+    // Assumindo AppColors.textDark é a cor escura que você usa para texto em fundo claro
+    const Color lightTextColor = AppColors.textDark;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      // 1. Fundo do Scaffold (Sempre Branco)
+      backgroundColor: lightBackgroundColor,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
-        iconTheme: IconThemeData(color: textColor),
+        // 2. Cor dos Ícones no AppBar (Sempre Escuro)
+        iconTheme: const IconThemeData(color: lightTextColor),
       ),
       body: SafeArea(
         child: Center(
@@ -110,8 +114,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 children: [
                   Image.asset(
                     'assets/images/duck.png',
-                    width: 80,
-                    height: 80,
+                    width: 120,
+                    height: 120,
                     fit: BoxFit.contain,
                   ),
                   const SizedBox(height: 24),
@@ -121,7 +125,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: textColor
+                        // 3. Cor do Título (Sempre Escuro)
+                        color: lightTextColor
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -174,7 +179,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _signUp,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.blue,
+                        backgroundColor: AppColors.buttonPurple,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -206,7 +211,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           children: [
                             TextSpan(
                               text: 'Já tem uma conta? ',
-                              style: TextStyle(color: textColor.withOpacity(0.7)),
+                              // 4. Cor do Texto de Rodapé (Sempre Escuro, semi-transparente)
+                              style: TextStyle(color: lightTextColor.withOpacity(0.7)),
                             ),
                             const TextSpan(
                               text: 'Faça login',
