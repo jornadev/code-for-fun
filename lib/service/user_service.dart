@@ -23,7 +23,7 @@ class UserService {
         'score': 0,
         'completedLessons': [],
         'createdAt': FieldValue.serverTimestamp(),
-        // Removemos photoUrl pois usaremos photoBase64 se existir
+        'lastVisitedTrail': null, // Inicializa o campo de rastreamento
       });
     } catch (e) {
       print("ERRO CRÍTICO: $e");
@@ -79,20 +79,15 @@ class UserService {
     );
   }
 
-  // --- 8. SALVAR FOTO DE PERFIL (Solução Base64 / Gratuita) ---
-  // Substitui o uploadProfilePicture que precisava de Storage pago
+  // 8. SALVAR FOTO DE PERFIL (Base64)
   Future<void> saveProfileImage(File imageFile) async {
     final user = _auth.currentUser;
     if (user == null) return;
 
     try {
-      // 1. Lê o arquivo da imagem como bytes
       final bytes = await imageFile.readAsBytes();
-
-      // 2. Converte para um texto gigante (Base64)
       final String base64Image = base64Encode(bytes);
 
-      // 3. Salva esse texto direto no documento do usuário no Firestore
       await _db.collection('users').doc(user.uid).set({
         'photoBase64': base64Image,
       }, SetOptions(merge: true));
@@ -100,6 +95,37 @@ class UserService {
     } catch (e) {
       print("Erro ao salvar imagem base64: $e");
       throw Exception("Não foi possível salvar a foto.");
+    }
+  }
+
+  // --- NOVOS MÉTODOS PARA UX (Rastreamento de Trilha) ---
+
+  // 9. Salva o ID da última trilha visitada no documento do usuário
+  Future<void> saveLastVisitedTrail(String trailId) async {
+    if (_userId == null) return;
+
+    try {
+      await _db.collection('users').doc(_userId).set(
+        {'lastVisitedTrail': trailId},
+        SetOptions(merge: true),
+      );
+    } catch (e) {
+      print("Erro ao salvar última trilha visitada: $e");
+    }
+  }
+
+  // 10. Busca o ID da última trilha visitada
+  Future<String?> getLastVisitedTrail() async {
+    if (_userId == null) return null;
+
+    try {
+      final doc = await _db.collection('users').doc(_userId).get();
+      if (doc.exists && doc.data() != null) {
+        return doc.data()!['lastVisitedTrail'] as String?;
+      }
+      return null;
+    } catch (e) {
+      return null;
     }
   }
 }

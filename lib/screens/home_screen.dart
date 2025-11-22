@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:code_for_fun/model/trail_model.dart';
 import 'package:code_for_fun/service/trail_service.dart';
+import 'package:code_for_fun/service/user_service.dart'; // NOVO: Para buscar o último ID
 import 'package:code_for_fun/screens/trail_screen.dart';
 import 'package:code_for_fun/providers/score_provider.dart';
 import 'package:code_for_fun/constants/app_colors.dart';
@@ -20,6 +21,10 @@ class _HomeScreenState extends State<HomeScreen> {
   String _userName = '...';
 
   final TrailService _trailService = TrailService();
+  final UserService _userService = UserService(); // Instância do UserService
+
+  // Variável para guardar o ID da última trilha visitada
+  String? _lastVisitedTrailId;
 
   // Cor Roxa Principal (Deep Purple)
   final Color _mainPurple = const Color(0xFF673AB7);
@@ -31,7 +36,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<ScoreProvider>(context, listen: false).loadUserData();
+      _loadLastVisitedTrail(); // NOVO: Carrega a última trilha
     });
+  }
+
+  // NOVO MÉTODO: Carrega o último ID salvo
+  Future<void> _loadLastVisitedTrail() async {
+    final id = await _userService.getLastVisitedTrail();
+    if (mounted && id != null) {
+      setState(() {
+        _lastVisitedTrailId = id;
+      });
+    }
   }
 
   void _loadUserName() {
@@ -57,31 +73,46 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // --- FUNÇÃO AUXILIAR PARA VERIFICAR CONCLUSÃO ---
+  bool _isTrailCompleted(Trail trail, Set<String> completedIds) {
+    if (trail.lessonIds.isEmpty) {
+      return false;
+    }
+    // Retorna true se a contagem de lições completas for igual ao total de lições da trilha
+    final int completedCount = trail.lessonIds.where((lessonId) => completedIds.contains(lessonId)).length;
+    return completedCount == trail.lessonIds.length;
+  }
+
+  // --- CÁLCULO DO PROGRESSO DE UMA TRILHA ---
+  double _calculateProgress(Trail trail, Set<String> completedIds) {
+    if (trail.lessonIds.isEmpty) return 0.0;
+    int completedCount = trail.lessonIds
+        .where((lessonId) => completedIds.contains(lessonId))
+        .length;
+    return completedCount / trail.lessonIds.length;
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final scoreProvider = context.watch<ScoreProvider>();
     final Set<String> completedIds = scoreProvider.completedLessonIds.toSet();
 
-    // Detecta se é modo escuro
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // Cor do fundo do container (Branco no claro, Cinza escuro no escuro)
     final sheetColor = isDark ? const Color(0xFF1B1B1E) : Colors.white;
 
     return Scaffold(
-      backgroundColor: _mainPurple, // O fundo geral é roxo (cabeçalho)
+      backgroundColor: _mainPurple,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. CABEÇALHO
           _buildHeader(context, _userName),
 
-          // 2. CONTEÚDO (Dentro do Container que adapta a cor)
           Expanded(
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: sheetColor, // <--- AQUI MUDA A COR
+                color: sheetColor,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
@@ -95,7 +126,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Padding(
                         padding: const EdgeInsets.all(32.0),
                         child: CircularProgressIndicator(
-                          // No modo escuro o loading é branco, no claro é roxo
                           color: isDark ? Colors.white : _mainPurple,
                         ),
                       ),
@@ -122,15 +152,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   }
 
+                  // FILTRO PRINCIPAL: Remove trilhas 100% concluídas
+                  final activeTrails = trails.where((trail) => !_isTrailCompleted(trail, completedIds)).toList();
+
                   return SingleChildScrollView(
                     padding: const EdgeInsets.only(top: 24, bottom: 24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildContinueSection(context, completedIds, trails, isDark),
-                        _buildRecommendedSection(context, trails, isDark),
+                        // NOVO: Lógica de Continuação com Prioridade para a Última Visitada
+                        _buildContinueSection(context, completedIds, activeTrails, isDark, _lastVisitedTrailId),
+                        _buildRecommendedSection(context, activeTrails, isDark, completedIds),
                         const SizedBox(height: 24),
-                        _buildYourTrailsSection(context, completedIds, trails, isDark),
+                        _buildYourTrailsSection(context, completedIds, activeTrails, isDark),
                       ],
                     ),
                   );
@@ -207,23 +241,36 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildContinueSection(BuildContext context, Set<String> completedIds, List<Trail> allTrails, bool isDark) {
+  Widget _buildContinueSection(BuildContext context, Set<String> completedIds, List<Trail> activeTrails, bool isDark, String? lastVisitedId) {
     Trail? trailToContinue;
     double trailProgress = 0.0;
 
-    for (var trail in allTrails) {
-      if (trail.lessonIds.isEmpty) continue;
+    // 1. Prioridade: Última trilha visitada, SE ela tiver progresso e não estiver completa
+    if (lastVisitedId != null) {
+      // CORREÇÃO: Usar where().isNotEmpty para evitar o erro de firstWhereOrNull/firstWhere sem orElse
+      final foundTrail = activeTrails.where((t) => t.id == lastVisitedId);
 
-      int completedCount = trail.lessonIds
-          .where((id) => completedIds.contains(id))
-          .length;
+      if (foundTrail.isNotEmpty) {
+        final lastTrail = foundTrail.first; // Seguro para pegar o primeiro
+        final progress = _calculateProgress(lastTrail, completedIds);
 
-      double progress = completedCount / trail.lessonIds.length;
+        // Verifica se tem progresso (0% < progress < 100%)
+        if (progress > 0 && progress < 1.0) {
+          trailToContinue = lastTrail;
+          trailProgress = progress;
+        }
+      }
+    }
 
-      if (progress > 0 && progress < 1.0) {
-        trailToContinue = trail;
-        trailProgress = progress;
-        break;
+    // 2. Fallback: Se a última visitada não serviu, pegamos a primeira com progresso
+    if (trailToContinue == null) {
+      for (var trail in activeTrails) {
+        final progress = _calculateProgress(trail, completedIds);
+        if (progress > 0 && progress < 1.0) {
+          trailToContinue = trail;
+          trailProgress = progress;
+          break;
+        }
       }
     }
 
@@ -231,7 +278,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return const SizedBox.shrink();
     }
 
-    // Define a cor do título baseada no tema
     final titleColor = isDark ? Colors.white : AppColors.textDark;
 
     return Padding(
@@ -260,8 +306,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildRecommendedSection(BuildContext context, List<Trail> trails, bool isDark) {
+  Widget _buildRecommendedSection(BuildContext context, List<Trail> activeTrails, bool isDark, Set<String> completedIds) {
     final titleColor = isDark ? Colors.white : AppColors.textDark;
+
+    final recommended = activeTrails.where((t) {
+      final progress = _calculateProgress(t, completedIds);
+      return progress < 0.1;
+    }).toList();
+
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -281,7 +333,7 @@ class _HomeScreenState extends State<HomeScreen> {
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
             child: Row(
-              children: trails.map((trail) {
+              children: recommended.map((trail) {
                 return Padding(
                   padding: const EdgeInsets.only(right: 16),
                   child: _buildTrailCard(context, trail: trail, isDark: isDark),
@@ -294,8 +346,37 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildYourTrailsSection(BuildContext context, Set<String> completedIds, List<Trail> trails, bool isDark) {
+  Widget _buildYourTrailsSection(BuildContext context, Set<String> completedIds, List<Trail> activeTrails, bool isDark) {
     final titleColor = isDark ? Colors.white : AppColors.textDark;
+
+    if (activeTrails.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Parabéns!',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: titleColor,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Você concluiu todas as trilhas disponíveis. Ótimo trabalho!',
+              style: TextStyle(
+                fontSize: 16,
+                color: titleColor.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      );
+    }
+
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -312,15 +393,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 16),
           Column(
-            children: trails.map((trail) {
+            children: activeTrails.map((trail) {
 
-              double progress = 0.0;
-              if (trail.lessonIds.isNotEmpty) {
-                int completedCount = trail.lessonIds
-                    .where((id) => completedIds.contains(id))
-                    .length;
-                progress = completedCount / trail.lessonIds.length;
-              }
+              double progress = _calculateProgress(trail, completedIds);
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
