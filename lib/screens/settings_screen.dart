@@ -16,23 +16,20 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  // Cor Roxa Principal (Deep Purple)
   final Color _mainPurple = const Color(0xFF673AB7);
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    // Detecta o tema para ajustar cores da lista
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final sheetColor = isDark ? const Color(0xFF1B1B1E) : Colors.white;
     final textColor = isDark ? Colors.white : AppColors.textDark;
 
     return Scaffold(
-      backgroundColor: _mainPurple, // Fundo Roxo no topo
+      backgroundColor: _mainPurple,
       body: Column(
         children: [
-          // --- CABEÇALHO ROXO (Apenas Título) ---
           SafeArea(
             bottom: false,
             child: Padding(
@@ -51,7 +48,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
 
-          // --- CORPO (LISTA EM CONTAINER ARREDONDADO) ---
           Expanded(
             child: Container(
               width: double.infinity,
@@ -65,7 +61,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(24, 40, 24, 40),
                 children: [
-                  // 1. ---------- Aparência ----------
                   _buildSectionTitle('Aparência', textColor),
                   _buildSettingsTile(
                     context,
@@ -78,7 +73,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                   const SizedBox(height: 10),
 
-                  // 2. ---------- Conta e Segurança ----------
                   _buildSectionTitle('Conta e Segurança', textColor),
                   _buildSettingsTile(
                     context,
@@ -96,7 +90,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     isDark: isDark,
                     textColor: textColor,
                   ),
-                  // LOGOUT MOVIDO PARA CÁ
                   _buildSettingsTile(
                     context,
                     icon: Icons.logout,
@@ -109,7 +102,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                   const SizedBox(height: 10),
 
-                  // 3. ---------- Informações ----------
                   _buildSectionTitle('Informações', textColor),
                   _buildSettingsTile(
                     context,
@@ -122,7 +114,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                   const SizedBox(height: 30),
 
-                  // 4. ---------- Ações Destrutivas (APENAS RESETAR/EXCLUIR) ----------
                   _buildSectionTitle('Ações Destrutivas', textColor),
                   _buildDestructiveTile(
                     context,
@@ -147,7 +138,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ====== WIDGETS AUXILIARES E FUNÇÕES (MANTIDOS IGUAIS) ======
 
   Widget _buildSectionTitle(String title, Color textColor) {
     return Padding(

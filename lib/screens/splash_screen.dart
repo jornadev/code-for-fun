@@ -51,7 +51,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         );
       } else {
         Navigator.of(context).pushReplacement(
-          // --- LINHA MODIFICADA ---
           MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
         );
       }

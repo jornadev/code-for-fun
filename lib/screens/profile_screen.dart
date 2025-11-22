@@ -1,10 +1,10 @@
-import 'dart:convert'; // Para decodificar a imagem Base64
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart'; // Pacote de imagem
-import 'package:cloud_firestore/cloud_firestore.dart'; // Para ouvir o banco
+import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:code_for_fun/providers/score_provider.dart';
 import 'package:code_for_fun/constants/app_colors.dart';
@@ -75,7 +75,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final Set<String> completedIds = scoreProvider.completedLessonIds.toSet();
     final int score = scoreProvider.score;
 
-    // Detecção de Tema
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final sheetColor = isDark ? const Color(0xFF1B1B1E) : Colors.white;
     final textColor = isDark ? Colors.white : AppColors.textDark;
@@ -93,10 +92,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     return Scaffold(
-      backgroundColor: _mainPurple, // Fundo Roxo no topo
+      backgroundColor: _mainPurple,
       body: Column(
         children: [
-          // --- CABEÇALHO ROXO COM AVATAR ---
           SafeArea(
             bottom: false,
             child: Padding(
@@ -113,7 +111,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Avatar com Anel
                   Center(
                     child: Stack(
                       children: [
@@ -140,7 +137,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 }
                               }
 
-                              // Borda translúcida em volta do avatar
                               return Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
@@ -149,7 +145,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 child: CircleAvatar(
                                   radius: 60,
-                                  backgroundColor: Colors.white, // Fundo branco para destaque
+                                  backgroundColor: Colors.white,
                                   backgroundImage: imageProvider,
                                   child: _isUploading
                                       ? const CircularProgressIndicator()
@@ -161,7 +157,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             },
                           ),
                         ),
-                        // Botão de Câmera
                         Positioned(
                           bottom: 0,
                           right: 0,
@@ -186,7 +181,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
 
-          // --- CORPO (CONTAINER ARREDONDADO) ---
           Expanded(
             child: Container(
               width: double.infinity,
@@ -200,7 +194,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(24, 30, 24, 40),
                 children: [
-                  // Infos
                   _buildInfoTile(
                       context: context,
                       icon: Icons.person_outlined,
@@ -238,7 +231,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Cursos em Andamento
                   StreamBuilder<List<Trail>>(
                     stream: _trailService.getTrailsStream(),
                     builder: (context, snapshot) {
@@ -317,7 +309,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required Color textColor,
   }) {
     String percentageLabel = '${(progress * 100).toInt()}%';
-    // Ajuste de cores do card para o modo dark
     final cardBg = isDark ? const Color(0xFF2A2A2D) : Colors.white;
     final borderColor = isDark ? Colors.white10 : Colors.transparent;
 

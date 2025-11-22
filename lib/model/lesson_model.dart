@@ -1,4 +1,4 @@
-import 'dart:convert'; // Necessário para JSON
+import 'dart:convert';
 
 class Answer {
   final String id;
@@ -24,13 +24,13 @@ class Question {
   final String id;
   final String text;
   final List<Answer> answers;
-  final String? hintText; // <-- NOVO CAMPO ADICIONADO
+  final String? hintText;
 
   const Question({
     required this.id,
     required this.text,
     required this.answers,
-    this.hintText, // <-- ADICIONADO AO CONSTRUTOR
+    this.hintText,
   });
 
   factory Question.fromMap(Map<String, dynamic> map) {
@@ -41,7 +41,7 @@ class Question {
           ?.map((x) => Answer.fromMap(x))
           .toList() ??
           [],
-      hintText: map['hintText'] as String?, // <-- LENDO O CAMPO
+      hintText: map['hintText'] as String?,
     );
   }
 }

@@ -21,7 +21,6 @@ class _TrailScreenState extends State<TrailScreen> {
   final UserService _userService = UserService();
   final TrailService _trailService = TrailService();
 
-  // Cor Principal (Roxo Deep Purple)
   final Color _mainPurple = const Color(0xFF673AB7);
   final Color _darkBackgroundGray = const Color(0xFF2B2B2B);
 
@@ -64,9 +63,9 @@ class _TrailScreenState extends State<TrailScreen> {
     final listBgColor = isDark ? _darkBackgroundGray : Colors.white;
 
     return Scaffold(
-      backgroundColor: _mainPurple, // Fundo principal é roxo
+      backgroundColor: _mainPurple,
       appBar: AppBar(
-        backgroundColor: _mainPurple, // Topo Roxo
+        backgroundColor: _mainPurple,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
@@ -84,7 +83,7 @@ class _TrailScreenState extends State<TrailScreen> {
         centerTitle: true,
       ),
       body: Container(
-        color: listBgColor, // Fundo da lista
+        color: listBgColor,
         child: _isLoadingUserData
             ? Center(child: CircularProgressIndicator(color: _mainPurple))
             : StreamBuilder<List<Lesson>>(
@@ -118,12 +117,10 @@ class _TrailScreenState extends State<TrailScreen> {
 
             return ListView.builder(
               padding: const EdgeInsets.only(top: 40, bottom: 100),
-              // O itemCount é +1 para a Linha de Chegada
               itemCount: lessons.length + 1,
               itemBuilder: (context, index) {
 
                 if (index < lessons.length) {
-                  // NÓS DA LIÇÃO
                   final lesson = lessons[index];
 
                   final bool isCompleted = _completedLessonIds.contains(lesson.id);
@@ -141,7 +138,6 @@ class _TrailScreenState extends State<TrailScreen> {
                     isDark,
                   );
                 } else {
-                  // LINHA DE CHEGADA (Sempre aparece no final)
                   return _buildFinishLine(context, isTrailCompleted, isDark);
                 }
               },
@@ -152,14 +148,12 @@ class _TrailScreenState extends State<TrailScreen> {
     );
   }
 
-  // --- WIDGET DA LINHA DE CHEGADA ---
   Widget _buildFinishLine(BuildContext context, bool isTrailCompleted, bool isDark) {
     return Padding(
       padding: const EdgeInsets.only(top: 40, bottom: 40),
       child: Center(
         child: Column(
           children: [
-            // Troféu Principal
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -210,9 +204,7 @@ class _TrailScreenState extends State<TrailScreen> {
     );
   }
 
-  // --- FUNÇÃO AUXILIAR PARA LIMPAR O TÍTULO ---
   String _cleanLessonTitle(String title) {
-    // Remove o prefixo "Módulo X:" ou "Módulo X: "
     final regex = RegExp(r'^Módulo\s+\d+:\s*');
     return title.replaceAll(regex, '').trim();
   }
@@ -228,45 +220,39 @@ class _TrailScreenState extends State<TrailScreen> {
       bool isLocked,
       bool isDark,
       ) {
-    // Curva Zig-Zag
     final double xOffset = math.sin(index * 2.5) * 80.0;
 
     final lessonNumber = index + 1;
 
-    // --- PALETA DE CORES DINÂMICA ---
     Color circleColor;
     Color shadowColor;
     Color iconColor;
     double buttonSize = 75.0;
 
     if (isCompleted) {
-      // Completas: Dourado
       circleColor = Colors.amber;
       shadowColor = Colors.amber[800]!;
       iconColor = Colors.white;
     } else if (isCurrent) {
-      // Atual: Roxo Principal (Destaque)
       circleColor = _mainPurple;
       shadowColor = const Color(0xFF4527A0);
       iconColor = Colors.white;
       buttonSize = 90.0;
     } else {
-      // Bloqueada: Cinza Escuro (No Dark Mode) ou Cinza Claro (No Light Mode)
       circleColor = isDark ? const Color(0xFF424242) : Colors.grey[300]!;
       shadowColor = isDark ? Colors.black54 : Colors.grey[400]!;
       iconColor = isDark ? Colors.white30 : Colors.grey[500]!;
     }
 
-    // Define o conteúdo central do botão
     String? labelContent;
     IconData iconContent = Icons.lock;
 
     if (isLocked) {
-      iconContent = Icons.lock; // Cadeado para bloqueado
+      iconContent = Icons.lock;
     } else if (isCompleted) {
-      iconContent = Icons.star_rounded; // Estrela para completo
+      iconContent = Icons.star_rounded;
     } else {
-      labelContent = '$lessonNumber'; // Número da lição se estiver atual/liberada
+      labelContent = '$lessonNumber';
     }
 
     return Center(
@@ -276,7 +262,6 @@ class _TrailScreenState extends State<TrailScreen> {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // 1. LINHA CONECTORA
             if (index < totalLength)
               Transform.translate(
                 offset: Offset(
@@ -300,7 +285,6 @@ class _TrailScreenState extends State<TrailScreen> {
                 ),
               ),
 
-            // 2. O BOTão 3D
             Transform.translate(
               offset: Offset(xOffset, 0),
               child: Column(
@@ -314,19 +298,16 @@ class _TrailScreenState extends State<TrailScreen> {
                     icon: iconContent,
                     iconColor: iconColor,
                     isLocked: isLocked,
-                    // Passa o número da lição ou null
                     label: labelContent,
                     onTap: isLocked
                         ? null
                         : () => _navigateToLesson(context, lesson),
                   ),
 
-                  // Removido: Título da Lição (para limpar o mapa)
                 ],
               ),
             ),
 
-            // 3. ELEMENTOS DECORATIVOS (Ícones no fundo)
             if (index % 3 == 0 && index > 0)
               Transform.translate(
                 offset: Offset(-xOffset * 1.8, -30),
@@ -343,15 +324,14 @@ class _TrailScreenState extends State<TrailScreen> {
   }
 }
 
-// --- WIDGET DO BOTÃO 3D (ATUALIZADO PARA SUPORTAR NÚMERO E ÍCONE) ---
 class _GameButton3D extends StatefulWidget {
   final double size;
   final Color color;
   final Color shadowColor;
-  final IconData icon; // Agora usado para cadeado/estrela
+  final IconData icon;
   final Color iconColor;
   final bool isLocked;
-  final String? label; // Usado para o número da lição
+  final String? label;
   final VoidCallback? onTap;
 
   const _GameButton3D({
@@ -393,7 +373,6 @@ class _GameButton3DState extends State<_GameButton3D> {
         height: widget.size + shadowHeight,
         child: Stack(
           children: [
-            // Sombra (Base)
             Positioned(
               bottom: 0,
               left: 0,
@@ -406,7 +385,6 @@ class _GameButton3DState extends State<_GameButton3D> {
                 ),
               ),
             ),
-            // Botão (Topo)
             AnimatedPositioned(
               duration: const Duration(milliseconds: 100),
               top: topOffset,
@@ -419,7 +397,7 @@ class _GameButton3DState extends State<_GameButton3D> {
                   shape: BoxShape.circle,
                 ),
                 child: Center(
-                  child: widget.label != null && !widget.isLocked // Se tem número, mostra o número
+                  child: widget.label != null && !widget.isLocked
                       ? Text(
                     widget.label!,
                     style: TextStyle(
@@ -428,11 +406,10 @@ class _GameButton3DState extends State<_GameButton3D> {
                       color: widget.iconColor,
                     ),
                   )
-                      : Icon(widget.icon, color: widget.iconColor, size: widget.size * 0.4), // Senão, mostra o ícone (cadeado ou estrela)
+                      : Icon(widget.icon, color: widget.iconColor, size: widget.size * 0.4),
                 ),
               ),
             ),
-            // Brilho
             if (!widget.isLocked && !_isPressed)
               Positioned(
                 top: widget.size * 0.15,

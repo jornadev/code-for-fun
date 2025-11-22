@@ -9,7 +9,6 @@ class UserService {
 
   String? get _userId => _auth.currentUser?.uid;
 
-  // 1. Criação inicial do perfil
   Future<void> createUserDocument(User user, String name) async {
     final docRef = _db.collection('users').doc(user.uid);
     final doc = await docRef.get();
@@ -23,7 +22,7 @@ class UserService {
         'score': 0,
         'completedLessons': [],
         'createdAt': FieldValue.serverTimestamp(),
-        'lastVisitedTrail': null, // Inicializa o campo de rastreamento
+        'lastVisitedTrail': null,
       });
     } catch (e) {
       print("ERRO CRÍTICO: $e");
@@ -31,7 +30,6 @@ class UserService {
     }
   }
 
-  // 2. Buscar Pontuação
   Future<int> getUserScore() async {
     if (_userId == null) return 0;
     try {
@@ -40,13 +38,11 @@ class UserService {
     } catch (e) { return 0; }
   }
 
-  // 3. Atualizar Pontuação
   Future<void> updateUserScore(int newScore) async {
     if (_userId == null) return;
     await _db.collection('users').doc(_userId).set({'score': newScore}, SetOptions(merge: true));
   }
 
-  // 4. Completar Lição
   Future<void> completeLesson(String lessonId) async {
     if (_userId == null) return;
     await _db.collection('users').doc(_userId).set({
@@ -54,7 +50,6 @@ class UserService {
     }, SetOptions(merge: true));
   }
 
-  // 5. Buscar Lições Completas
   Future<List<String>> getCompletedLessons() async {
     if (_userId == null) return [];
     try {
@@ -63,7 +58,6 @@ class UserService {
     } catch (e) { return []; }
   }
 
-  // 6. Ranking Global
   Future<List<Map<String, dynamic>>> getRanking() async {
     try {
       final q = await _db.collection('users').orderBy('score', descending: true).limit(50).get();
@@ -71,7 +65,6 @@ class UserService {
     } catch (e) { return []; }
   }
 
-  // 7. Resetar Progresso
   Future<void> resetUserProgress() async {
     if (_userId == null) return;
     await _db.collection('users').doc(_userId).set(
@@ -79,7 +72,6 @@ class UserService {
     );
   }
 
-  // 8. SALVAR FOTO DE PERFIL (Base64)
   Future<void> saveProfileImage(File imageFile) async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -98,9 +90,7 @@ class UserService {
     }
   }
 
-  // --- NOVOS MÉTODOS PARA UX (Rastreamento de Trilha) ---
 
-  // 9. Salva o ID da última trilha visitada no documento do usuário
   Future<void> saveLastVisitedTrail(String trailId) async {
     if (_userId == null) return;
 
@@ -114,7 +104,6 @@ class UserService {
     }
   }
 
-  // 10. Busca o ID da última trilha visitada
   Future<String?> getLastVisitedTrail() async {
     if (_userId == null) return null;
 

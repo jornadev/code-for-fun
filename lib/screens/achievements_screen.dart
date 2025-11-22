@@ -9,18 +9,15 @@ class AchievementsScreen extends StatelessWidget {
   const AchievementsScreen({super.key});
 
   final Color _mainPurple = const Color(0xFF673AB7);
-  final int _xpPerLesson = 10; // XP fixo por lição concluída
+  final int _xpPerLesson = 50;
 
-  // Lógica para verificar se todos os IDs de lições da trilha estão contidos no Set de concluídos do usuário
   bool _isTrailCompleted(Trail trail, Set<String> completedIds) {
     if (trail.lessonIds.isEmpty) {
       return false;
     }
-    // Verifica se todos os lessonIds da trilha estão no set de concluídos
     return trail.lessonIds.every(completedIds.contains);
   }
 
-  // --- NOVO: FUNÇÃO PARA MOSTRAR DETALHES ---
   void _showAchievementDetails(BuildContext context, Trail trail) {
     final int totalXPGained = trail.lessonIds.length * _xpPerLesson;
 
@@ -38,7 +35,6 @@ class AchievementsScreen extends StatelessWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Área do Título (Roxo)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 24),
@@ -70,7 +66,6 @@ class AchievementsScreen extends StatelessWidget {
                 ),
               ),
 
-              // Área de Detalhes (Corpo)
               Padding(
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
@@ -132,7 +127,6 @@ class AchievementsScreen extends StatelessWidget {
     );
   }
 
-  // Widget auxiliar para cada linha de detalhe
   Widget _buildDetailRow({
     required IconData icon,
     required String label,
@@ -179,15 +173,13 @@ class AchievementsScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : AppColors.textDark;
 
-    // Cor adaptável do container da lista
     final listContainerColor = isDark ? const Color(0xFF1B1B1E) : Colors.white;
 
     return Scaffold(
-      backgroundColor: _mainPurple, // Fundo Roxo no topo
+      backgroundColor: _mainPurple,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- CABEÇALHO ROXO ---
           SafeArea(
             bottom: false,
             child: Padding(
@@ -203,12 +195,11 @@ class AchievementsScreen extends StatelessWidget {
             ),
           ),
 
-          // --- CORPO COM BORDA ARREDONDADA ---
           Expanded(
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: listContainerColor, // Fundo adaptável para a lista
+                color: listContainerColor,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
@@ -265,23 +256,22 @@ class AchievementsScreen extends StatelessWidget {
     final titleColor = isDark ? Colors.white : AppColors.textDark;
 
     return GestureDetector(
-      onTap: () => _showAchievementDetails(context, trail), // <--- AQUI CHAMA O MODAL
+      onTap: () => _showAchievementDetails(context, trail),
       child: Card(
         color: cardColor,
         margin: const EdgeInsets.only(bottom: 16),
         elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.amber.withOpacity(0.5), width: 1.5), // Borda dourada
+          side: BorderSide(color: Colors.amber.withOpacity(0.5), width: 1.5),
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Ícone do Troféu / Conclusão
               const Icon(
                 Icons.workspace_premium_rounded,
-                color: Colors.amber, // Dourado
+                color: Colors.amber,
                 size: 40,
               ),
               const SizedBox(width: 16),

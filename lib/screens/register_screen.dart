@@ -48,7 +48,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Cria Usuário no Auth
       UserCredential userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
@@ -60,14 +59,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (user != null) {
         final String name = _nameController.text.trim();
 
-        // 2. Atualiza nome no Auth
         await user.updateDisplayName(name);
 
-        // 3. Cria documento no Firestore (ESSENCIAL PARA O RANKING)
         await _userService.createUserDocument(user, name);
 
         if (mounted) {
-          // Navegação "Destrutiva": Remove a tela de cadastro da pilha
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
                 (Route<dynamic> route) => false,
@@ -97,12 +93,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final textColor = theme.textTheme.bodyLarge?.color ?? AppColors.textDark;
 
     return Scaffold(
-      // Usa a cor de fundo do tema ou uma cor padrão
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
-        iconTheme: IconThemeData(color: textColor), // Ícone de voltar visível
+        iconTheme: IconThemeData(color: textColor),
       ),
       body: SafeArea(
         child: Center(
@@ -167,13 +162,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                   const SizedBox(height: 32),
 
-                  // Botão Cadastrar
                   SizedBox(
                     height: 56,
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _signUp,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.blue, // Cor padrão do app
+                        backgroundColor: AppColors.blue,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -194,7 +188,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Link Login
                   Center(
                     child: GestureDetector(
                       onTap: () => Navigator.of(context).pushReplacement(

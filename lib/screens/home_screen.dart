@@ -21,12 +21,10 @@ class _HomeScreenState extends State<HomeScreen> {
   String _userName = '...';
 
   final TrailService _trailService = TrailService();
-  final UserService _userService = UserService(); // Instância do UserService
+  final UserService _userService = UserService();
 
-  // Variável para guardar o ID da última trilha visitada
   String? _lastVisitedTrailId;
 
-  // Cor Roxa Principal (Deep Purple)
   final Color _mainPurple = const Color(0xFF673AB7);
 
   @override
@@ -36,11 +34,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<ScoreProvider>(context, listen: false).loadUserData();
-      _loadLastVisitedTrail(); // NOVO: Carrega a última trilha
+      _loadLastVisitedTrail();
     });
   }
 
-  // NOVO MÉTODO: Carrega o último ID salvo
   Future<void> _loadLastVisitedTrail() async {
     final id = await _userService.getLastVisitedTrail();
     if (mounted && id != null) {
@@ -73,17 +70,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- FUNÇÃO AUXILIAR PARA VERIFICAR CONCLUSÃO ---
   bool _isTrailCompleted(Trail trail, Set<String> completedIds) {
     if (trail.lessonIds.isEmpty) {
       return false;
     }
-    // Retorna true se a contagem de lições completas for igual ao total de lições da trilha
     final int completedCount = trail.lessonIds.where((lessonId) => completedIds.contains(lessonId)).length;
     return completedCount == trail.lessonIds.length;
   }
 
-  // --- CÁLCULO DO PROGRESSO DE UMA TRILHA ---
   double _calculateProgress(Trail trail, Set<String> completedIds) {
     if (trail.lessonIds.isEmpty) return 0.0;
     int completedCount = trail.lessonIds
@@ -152,7 +146,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   }
 
-                  // FILTRO PRINCIPAL: Remove trilhas 100% concluídas
                   final activeTrails = trails.where((trail) => !_isTrailCompleted(trail, completedIds)).toList();
 
                   return SingleChildScrollView(
@@ -160,7 +153,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // NOVO: Lógica de Continuação com Prioridade para a Última Visitada
                         _buildContinueSection(context, completedIds, activeTrails, isDark, _lastVisitedTrailId),
                         _buildRecommendedSection(context, activeTrails, isDark, completedIds),
                         const SizedBox(height: 24),
@@ -245,16 +237,13 @@ class _HomeScreenState extends State<HomeScreen> {
     Trail? trailToContinue;
     double trailProgress = 0.0;
 
-    // 1. Prioridade: Última trilha visitada, SE ela tiver progresso e não estiver completa
     if (lastVisitedId != null) {
-      // CORREÇÃO: Usar where().isNotEmpty para evitar o erro de firstWhereOrNull/firstWhere sem orElse
       final foundTrail = activeTrails.where((t) => t.id == lastVisitedId);
 
       if (foundTrail.isNotEmpty) {
-        final lastTrail = foundTrail.first; // Seguro para pegar o primeiro
+        final lastTrail = foundTrail.first;
         final progress = _calculateProgress(lastTrail, completedIds);
 
-        // Verifica se tem progresso (0% < progress < 100%)
         if (progress > 0 && progress < 1.0) {
           trailToContinue = lastTrail;
           trailProgress = progress;
@@ -262,7 +251,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    // 2. Fallback: Se a última visitada não serviu, pegamos a primeira com progresso
     if (trailToContinue == null) {
       for (var trail in activeTrails) {
         final progress = _calculateProgress(trail, completedIds);
@@ -421,7 +409,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }) {
     String percentageLabel = '${(progress * 100).toInt()}%';
 
-    // Cores do Card no modo escuro/claro
     final cardColor = isDark ? const Color(0xFF2A2A2D) : Colors.white;
     final borderColor = isDark ? Colors.white10 : Colors.grey.shade100;
     final titleColor = isDark ? Colors.white : AppColors.textDark;
@@ -461,7 +448,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: Icon(
                     trail.icon,
-                    // No modo escuro, um roxo mais claro (lilás) fica melhor para contraste
                     color: isDark ? const Color(0xFFB39DDB) : _mainPurple,
                     size: 28,
                   ),
@@ -546,7 +532,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Icon(
                 trail.icon,
-                color: trail.iconColor, // Mantém a cor original do ícone da trilha
+                color: trail.iconColor,
                 size: 24,
               ),
             ),
@@ -585,7 +571,6 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(10),
           child: LinearProgressIndicator(
             value: progress,
-            // Fundo da barra mais escuro no modo dark
             backgroundColor: isDark ? Colors.grey[700] : Colors.grey[200],
             valueColor: AlwaysStoppedAnimation<Color>(
               isDark ? const Color(0xFFB39DDB) : _mainPurple, // Lilás no dark, Roxo no light
@@ -598,7 +583,6 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Text(
               percentageLabel,
               style: TextStyle(
-                // Texto preto se a barra for muito clara (lilás), branco se for escura
                 color: isDark ? Colors.black87 : Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 11,

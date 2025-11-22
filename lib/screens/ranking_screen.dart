@@ -14,19 +14,16 @@ class RankingScreen extends StatefulWidget {
 class _RankingScreenState extends State<RankingScreen> {
   final String? _currentUserUid = FirebaseAuth.instance.currentUser?.uid;
 
-  // Cores da Identidade Visual
-  final Color _mainPurple = const Color(0xFF673AB7); // Roxo Principal
-  final Color _accentPurple = const Color(0xFF512DA8); // Roxo Escuro para degradê
+  final Color _mainPurple = const Color(0xFF673AB7);
+  final Color _accentPurple = const Color(0xFF512DA8);
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Cores adaptáveis para o container da lista
     final sheetColor = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F7);
 
     return Scaffold(
-      // Fundo com degradê sutil para ficar mais "premium"
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -67,7 +64,6 @@ class _RankingScreenState extends State<RankingScreen> {
               );
             }
 
-            // Separa Top 3
             List<QueryDocumentSnapshot> top3 = [];
             if (docs.length > 0) top3.add(docs[0]);
             if (docs.length > 1) top3.add(docs[1]);
@@ -75,7 +71,6 @@ class _RankingScreenState extends State<RankingScreen> {
 
             return Column(
               children: [
-                // --- CABEÇALHO E PÓDIO ---
                 SafeArea(
                   bottom: false,
                   child: Padding(
@@ -87,7 +82,7 @@ class _RankingScreenState extends State<RankingScreen> {
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 22,
-                            fontWeight: FontWeight.w800, // Fonte mais grossa
+                            fontWeight: FontWeight.w800,
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -98,7 +93,6 @@ class _RankingScreenState extends State<RankingScreen> {
                   ),
                 ),
 
-                // --- LISTA DE USUÁRIOS ---
                 Expanded(
                   child: Container(
                     width: double.infinity,
@@ -116,7 +110,6 @@ class _RankingScreenState extends State<RankingScreen> {
                         ),
                       ],
                     ),
-                    // ClipRRect garante que o conteúdo não vase nas bordas arredondadas
                     child: ClipRRect(
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(30),
@@ -140,7 +133,6 @@ class _RankingScreenState extends State<RankingScreen> {
     );
   }
 
-  // --- WIDGETS DO PÓDIO ---
   Widget _buildPodium(BuildContext context, List<QueryDocumentSnapshot> top3) {
     if (top3.isEmpty) return const SizedBox.shrink();
 
@@ -148,41 +140,38 @@ class _RankingScreenState extends State<RankingScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        // 2º Lugar (Esquerda)
         if (top3.length > 1)
           Expanded(
             child: _buildPodiumItem(
               doc: top3[1],
               position: 2,
               height: 130,
-              color: const Color(0xFFE0E0E0), // Prata Brilhante
+              color: const Color(0xFFE0E0E0),
               scoreColor: Colors.white70,
             ),
           )
         else
           const Spacer(),
 
-        // 1º Lugar (Centro)
         Expanded(
-          flex: 2, // Ocupa mais espaço horizontal
+          flex: 2,
           child: _buildPodiumItem(
             doc: top3[0],
             position: 1,
-            height: 170, // Mais alto
-            color: const Color(0xFFFFD700), // Ouro Vibrante
+            height: 170,
+            color: const Color(0xFFFFD700),
             scoreColor: const Color(0xFFFFD700),
             isFirst: true,
           ),
         ),
 
-        // 3º Lugar (Direita)
         if (top3.length > 2)
           Expanded(
             child: _buildPodiumItem(
               doc: top3[2],
               position: 3,
               height: 110,
-              color: const Color(0xFFCD7F32), // Bronze Avermelhado
+              color: const Color(0xFFCD7F32),
               scoreColor: const Color(0xFFCD7F32).withOpacity(0.8),
             ),
           )
@@ -205,7 +194,6 @@ class _RankingScreenState extends State<RankingScreen> {
     final int score = (data['score'] as num?)?.toInt() ?? 0;
     final String initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
-    // Foto Base64
     ImageProvider? avatarImage;
     final String? base64String = data['photoBase64'];
     if (base64String != null && base64String.isNotEmpty) {
@@ -217,7 +205,6 @@ class _RankingScreenState extends State<RankingScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Coroa Flutuante
         if (isFirst)
           Transform.translate(
             offset: const Offset(0, 10),
@@ -226,11 +213,10 @@ class _RankingScreenState extends State<RankingScreen> {
 
         const SizedBox(height: 4),
 
-        // Avatar com Borda Dupla (Branco + Cor do Rank)
         Container(
           decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: color, width: 3), // Borda colorida externa
+              border: Border.all(color: color, width: 3),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.3),
@@ -242,7 +228,7 @@ class _RankingScreenState extends State<RankingScreen> {
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2), // Borda branca interna
+              border: Border.all(color: Colors.white, width: 2),
             ),
             child: CircleAvatar(
               radius: isFirst ? 36 : 26,
@@ -264,7 +250,6 @@ class _RankingScreenState extends State<RankingScreen> {
 
         const SizedBox(height: 8),
 
-        // Nome Curto
         Text(
           name.split(' ').first,
           style: const TextStyle(
@@ -275,7 +260,6 @@ class _RankingScreenState extends State<RankingScreen> {
           overflow: TextOverflow.ellipsis,
         ),
 
-        // Pontos
         Text(
           '$score pts',
           style: TextStyle(
@@ -287,7 +271,6 @@ class _RankingScreenState extends State<RankingScreen> {
 
         const SizedBox(height: 8),
 
-        // Barra do Pódio com Gradiente
         Container(
           width: double.infinity,
           height: height * 0.45,
@@ -296,8 +279,8 @@ class _RankingScreenState extends State<RankingScreen> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                color.withOpacity(0.4), // Mais visível no topo
-                color.withOpacity(0.0), // Desaparece embaixo
+                color.withOpacity(0.4),
+                color.withOpacity(0.0),
               ],
             ),
             borderRadius: const BorderRadius.only(
@@ -305,7 +288,7 @@ class _RankingScreenState extends State<RankingScreen> {
               topRight: Radius.circular(12),
             ),
             border: Border(
-              top: BorderSide(color: color, width: 4), // Topo sólido
+              top: BorderSide(color: color, width: 4),
               left: BorderSide(color: color.withOpacity(0.3), width: 1),
               right: BorderSide(color: color.withOpacity(0.3), width: 1),
             ),
@@ -317,7 +300,7 @@ class _RankingScreenState extends State<RankingScreen> {
                 color: Colors.white,
                 fontSize: 36,
                 fontWeight: FontWeight.w900,
-                fontFamily: 'Roboto', // Fonte padrão, mas bold
+                fontFamily: 'Roboto',
                 shadows: [
                   Shadow(blurRadius: 15, color: color, offset: const Offset(0, 0))
                 ],
@@ -329,7 +312,6 @@ class _RankingScreenState extends State<RankingScreen> {
     );
   }
 
-  // --- ITEM DA LISTA ---
   Widget _buildListItem(BuildContext context, QueryDocumentSnapshot doc, int position, bool isDark) {
     final data = doc.data() as Map<String, dynamic>;
     final bool isCurrentUser = doc.id == _currentUserUid;
@@ -338,7 +320,6 @@ class _RankingScreenState extends State<RankingScreen> {
     final int score = (data['score'] as num?)?.toInt() ?? 0;
     final String initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
-    // Foto
     ImageProvider? avatarImage;
     final String? base64String = data['photoBase64'];
     if (base64String != null && base64String.isNotEmpty) {
@@ -347,7 +328,6 @@ class _RankingScreenState extends State<RankingScreen> {
       } catch (_) {}
     }
 
-    // Cores de Troféu para os Top 3 na lista
     Widget rankWidget;
     if (position == 1) {
       rankWidget = const Icon(Icons.emoji_events, color: Color(0xFFFFD700), size: 28);
@@ -370,7 +350,6 @@ class _RankingScreenState extends State<RankingScreen> {
       );
     }
 
-    // Cores do Card
     final cardColor = isDark
         ? (isCurrentUser ? const Color(0xFF311B92) : const Color(0xFF2C2C2C))
         : (isCurrentUser ? _mainPurple.withOpacity(0.08) : Colors.white);
@@ -394,7 +373,7 @@ class _RankingScreenState extends State<RankingScreen> {
             width: isCurrentUser ? 1.5 : 0.0
         ),
         boxShadow: [
-          if (!isDark) // Sombra só no modo claro
+          if (!isDark)
             BoxShadow(
               color: Colors.black.withOpacity(0.03),
               blurRadius: 8,
@@ -404,12 +383,10 @@ class _RankingScreenState extends State<RankingScreen> {
       ),
       child: Row(
         children: [
-          // 1. Posição / Troféu
           SizedBox(width: 30, child: Center(child: rankWidget)),
 
           const SizedBox(width: 12),
 
-          // 2. Avatar
           CircleAvatar(
             radius: 24,
             backgroundColor: isDark ? _mainPurple.withOpacity(0.4) : _mainPurple.withOpacity(0.1),
@@ -427,7 +404,6 @@ class _RankingScreenState extends State<RankingScreen> {
 
           const SizedBox(width: 16),
 
-          // 3. Nome
           Expanded(
             child: Text(
               name,
@@ -441,7 +417,6 @@ class _RankingScreenState extends State<RankingScreen> {
             ),
           ),
 
-          // 4. Pontos (Pill)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(

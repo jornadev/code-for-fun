@@ -9,14 +9,12 @@ class ThemeProvider extends ChangeNotifier {
     _loadTheme();
   }
 
-  // Carrega o tema salvo
   Future<void> _loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
     _isDarkTheme = prefs.getBool('isDarkTheme') ?? false;
     notifyListeners();
   }
 
-  // Alterna entre claro/escuro
   Future<void> toggleTheme() async {
     _isDarkTheme = !_isDarkTheme;
     notifyListeners();

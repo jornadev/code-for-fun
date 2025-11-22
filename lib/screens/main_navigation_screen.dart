@@ -3,7 +3,7 @@ import 'package:code_for_fun/screens/home_screen.dart';
 import 'package:code_for_fun/screens/ranking_screen.dart';
 import 'package:code_for_fun/screens/profile_screen.dart';
 import 'package:code_for_fun/screens/settings_screen.dart';
-import 'package:code_for_fun/screens/achievements_screen.dart'; // IMPORT NECESSÁRIO
+import 'package:code_for_fun/screens/achievements_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -15,14 +15,12 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
-  // Cor Roxo Principal para destaque
   final Color _mainPurple = const Color(0xFF673AB7);
 
-  // Lista de telas com a nova ordem: Home, Ranking, Conquistas, Perfil, Ajustes
   static final List<Widget> _screens = <Widget>[
     const HomeScreen(),
     const RankingScreen(),
-    const AchievementsScreen(), // NOVO: Conquistas
+    const AchievementsScreen(),
     ProfileScreen(),
     const SettingsScreen(),
   ];
@@ -32,7 +30,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     null,
     null,
     null,
-    null, // Mantenho 5 nulls, um para cada tela
+    null,
   ];
 
   void _onItemTapped(int index) {

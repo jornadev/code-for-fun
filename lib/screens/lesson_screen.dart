@@ -14,16 +14,14 @@ class LessonScreen extends StatefulWidget {
 }
 
 class _LessonScreenState extends State<LessonScreen> {
-  // Paleta de Cores Vibrantes
-  final Color _mainPurple = const Color(0xFF673AB7); // Deep Purple
-  final Color _correctGreen = const Color(0xFF58CC02); // Verde Duolingo
-  final Color _wrongRed = const Color(0xFFFF4B4B); // Vermelho Suave
+  final Color _mainPurple = const Color(0xFF673AB7);
+  final Color _correctGreen = const Color(0xFF58CC02);
+  final Color _wrongRed = const Color(0xFFFF4B4B);
 
   int _currentQuestionIndex = 0;
   Answer? _selectedAnswer;
   bool _isAnswerChecked = false;
   bool _isFinishing = false;
-  // NOVO: Rastreia se o usuário errou na primeira tentativa
   bool _hasErrored = false;
 
   Question get _currentQuestion =>
@@ -59,7 +57,7 @@ class _LessonScreenState extends State<LessonScreen> {
         _currentQuestionIndex++;
         _selectedAnswer = null;
         _isAnswerChecked = false;
-        _hasErrored = false; // Reseta o estado do erro para a nova pergunta
+        _hasErrored = false;
       });
     }
   }
@@ -73,11 +71,10 @@ class _LessonScreenState extends State<LessonScreen> {
 
   Future<void> _handleContinue(bool isCorrect) async {
     if (!isCorrect) {
-      // Se errou, marca que errou e reseta para tentar de novo
       setState(() {
         _selectedAnswer = null;
         _isAnswerChecked = false;
-        _hasErrored = true; // Marca que o erro ocorreu
+        _hasErrored = true;
       });
       return;
     }
@@ -88,7 +85,6 @@ class _LessonScreenState extends State<LessonScreen> {
 
     try {
       if (_isLastQuestion) {
-        // FINALIZANDO
         setState(() => _isFinishing = true);
         await scoreProvider.addScore(10);
         await scoreProvider.completeLesson(widget.lesson.id);
@@ -97,7 +93,6 @@ class _LessonScreenState extends State<LessonScreen> {
           _showCompletionDialog();
         }
       } else {
-        // PRÓXIMA
         setState(() => _isFinishing = true);
         await scoreProvider.addScore(10);
         _nextQuestion();
@@ -109,7 +104,6 @@ class _LessonScreenState extends State<LessonScreen> {
     }
   }
 
-  // --- FUNÇÃO MOSTRA DICA ---
   void _showHintDialog() {
     showDialog(
       context: context,
@@ -136,9 +130,6 @@ class _LessonScreenState extends State<LessonScreen> {
       },
     );
   }
-
-
-  // --- DIALOG DE VITÓRIA (COM O DUKE) ---
   void _showCompletionDialog() {
     showDialog(
       context: context,
@@ -152,7 +143,6 @@ class _LessonScreenState extends State<LessonScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Avatar do Duke
                 Container(
                   height: 140,
                   width: 140,
@@ -231,7 +221,7 @@ class _LessonScreenState extends State<LessonScreen> {
     final double progress = (_currentQuestionIndex + 1) / widget.lesson.questions.length;
 
     return Scaffold(
-      backgroundColor: Colors.white, // Fundo limpo
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -239,7 +229,6 @@ class _LessonScreenState extends State<LessonScreen> {
           icon: Icon(Icons.close_rounded, color: Colors.grey[400], size: 32),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        // Barra de progresso no topo
         title: ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: LinearProgressIndicator(
@@ -271,7 +260,6 @@ class _LessonScreenState extends State<LessonScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Pergunta Grande
                   Text(
                     _currentQuestion.text,
                     textAlign: TextAlign.left,
@@ -284,7 +272,6 @@ class _LessonScreenState extends State<LessonScreen> {
                   ),
                   const SizedBox(height: 40),
 
-                  // Lista de Opções
                   ..._currentQuestion.answers
                       .map((answer) => _buildAnswerOption(answer))
                       .toList(),
@@ -293,13 +280,11 @@ class _LessonScreenState extends State<LessonScreen> {
             ),
           ),
 
-          // --- ÁREA INFERIOR DE AÇÃO ---
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
               child: Row(
                 children: [
-                  // 1. LÂMPADA DE DICA (SÓ APARECE SE JÁ TENTOU E ERROU)
                   if (_hasErrored && !_isAnswerChecked)
                     Padding(
                       padding: const EdgeInsets.only(right: 16.0),
@@ -312,7 +297,6 @@ class _LessonScreenState extends State<LessonScreen> {
                       ),
                     ),
 
-                  // 2. BOTÃO PRINCIPAL (VERIFICAR / CONTINUAR)
                   Expanded(
                     child: SizedBox(
                       height: 56,
@@ -325,7 +309,6 @@ class _LessonScreenState extends State<LessonScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          // Botão fica cinza se a resposta já foi checada
                           disabledBackgroundColor: _mainPurple.withOpacity(0.5),
                         ),
                         child: const Text(
@@ -447,7 +430,7 @@ class _LessonScreenState extends State<LessonScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white, // Fundo branco limpo
+        color: Colors.white,
         border: Border(top: BorderSide(color: statusColor.withOpacity(0.1), width: 2)),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))
@@ -458,7 +441,6 @@ class _LessonScreenState extends State<LessonScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Linha de Status (Ícone + Texto)
             Row(
               children: [
                 Icon(icon, color: statusColor, size: 32),
@@ -475,7 +457,6 @@ class _LessonScreenState extends State<LessonScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Botão de Ação
             SizedBox(
               width: double.infinity,
               height: 56,
