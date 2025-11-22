@@ -174,7 +174,7 @@ class _LessonScreenState extends State<LessonScreen> {
                 const SizedBox(height: 12),
 
                 Text(
-                  'Você concluiu a lição e ganhou +10 XP!',
+                  'Você concluiu a lição e ganhou +70 XP!',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
