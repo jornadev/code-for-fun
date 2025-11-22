@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:code_for_fun/service/user_service.dart';
 
-class ScoreProvider with ChangeNotifier {
+class ScoreProvider extends ChangeNotifier {
   final UserService _userService = UserService();
+
   int _score = 0;
   List<String> _completedLessonIds = [];
   bool _isLoading = false;
@@ -16,24 +17,27 @@ class ScoreProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final scoreFuture = _userService.getUserScore();
-      final lessonsFuture = _userService.getCompletedLessons();
+      final results = await Future.wait([
+        _userService.getUserScore(),
+        _userService.getCompletedLessons(),
+      ]);
 
-      _score = await scoreFuture;
-      _completedLessonIds = await lessonsFuture;
+      _score = results[0] as int;
+      _completedLessonIds = results[1] as List<String>;
     } catch (e) {
       print("Erro ao carregar dados do usuário no provider: $e");
       _score = 0;
       _completedLessonIds = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
-  Future<void> incrementScore() async {
+  Future<void> addScore(int points) async {
     final int previousScore = _score;
-    _score += 10;
+
+    _score += points;
     notifyListeners();
 
     try {
@@ -42,15 +46,14 @@ class ScoreProvider with ChangeNotifier {
       print("Falha ao salvar pontuação no provider: $e");
       _score = previousScore;
       notifyListeners();
-      throw Exception("Falha ao salvar pontuação.");
     }
   }
 
   Future<void> completeLesson(String lessonId) async {
-    if (!_completedLessonIds.contains(lessonId)) {
-      _completedLessonIds.add(lessonId);
-      notifyListeners();
-    }
+    if (_completedLessonIds.contains(lessonId)) return;
+
+    _completedLessonIds.add(lessonId);
+    notifyListeners();
 
     try {
       await _userService.completeLesson(lessonId);
@@ -58,7 +61,6 @@ class ScoreProvider with ChangeNotifier {
       print("Falha ao finalizar lição no provider: $e");
       _completedLessonIds.remove(lessonId);
       notifyListeners();
-      throw Exception("Falha ao salvar seu progresso.");
     }
   }
 
@@ -71,19 +73,12 @@ class ScoreProvider with ChangeNotifier {
 
       _score = 0;
       _completedLessonIds = [];
-
-      _isLoading = false;
-      notifyListeners();
     } catch (e) {
+      print("Erro ao resetar conta: $e");
+      throw e;
+    } finally {
       _isLoading = false;
       notifyListeners();
-      throw e;
     }
-  }
-
-  void resetScore() {
-    _score = 0;
-    _completedLessonIds = [];
-    notifyListeners();
   }
 }

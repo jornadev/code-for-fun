@@ -9,6 +9,7 @@ class Trail {
   final double progress;
   final Color iconColor;
   final List<Lesson> lessons;
+  final List<String> lessonIds;
 
   const Trail({
     required this.id,
@@ -17,6 +18,23 @@ class Trail {
     required this.level,
     required this.progress,
     required this.iconColor,
-    required this.lessons,
+    this.lessons = const [],
+    this.lessonIds = const [],
   });
+
+  factory Trail.fromMap(Map<String, dynamic> map, String documentId) {
+    return Trail(
+      id: documentId,
+      title: map['title'] ?? '',
+      level: map['level'] ?? 'Iniciante',
+      progress: (map['progress'] ?? 0).toDouble(),
+      icon: IconData(
+        map['iconCodePoint'] ?? 0xe156,
+        fontFamily: map['iconFontFamily'] ?? 'MaterialIcons',
+      ),
+      iconColor: Color(map['colorValue'] ?? 0xFF000000),
+      lessons: [],
+      lessonIds: List<String>.from(map['lessonIds'] ?? []),
+    );
+  }
 }

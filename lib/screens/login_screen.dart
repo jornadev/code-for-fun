@@ -187,7 +187,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 16),
 
-                // CAMPO SENHA
                 const Text(
                   'Senha',
                   style: TextStyle(
@@ -243,7 +242,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 40),
 
-                // BOTÃO LOGIN EMAIL
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -269,7 +267,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 30),
 
-                // BOTÃO GOOGLE
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -300,7 +297,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 40),
 
-                // RODAPÉ CADASTRAR
                 Center(
                   child: RichText(
                     text: TextSpan(

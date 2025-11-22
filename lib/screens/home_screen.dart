@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:code_for_fun/model/trail_model.dart';
 import 'package:code_for_fun/service/trail_service.dart';
+import 'package:code_for_fun/service/user_service.dart'; // NOVO: Para buscar o último ID
 import 'package:code_for_fun/screens/trail_screen.dart';
-import 'package:provider/provider.dart';
 import 'package:code_for_fun/providers/score_provider.dart';
 import 'package:code_for_fun/constants/app_colors.dart';
 
@@ -17,11 +20,31 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String _userName = '...';
 
+  final TrailService _trailService = TrailService();
+  final UserService _userService = UserService();
+
+  String? _lastVisitedTrailId;
+
+  final Color _mainPurple = const Color(0xFF673AB7);
+
   @override
   void initState() {
     super.initState();
     _loadUserName();
-    Provider.of<ScoreProvider>(context, listen: false).loadUserData();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<ScoreProvider>(context, listen: false).loadUserData();
+      _loadLastVisitedTrail();
+    });
+  }
+
+  Future<void> _loadLastVisitedTrail() async {
+    final id = await _userService.getLastVisitedTrail();
+    if (mounted && id != null) {
+      setState(() {
+        _lastVisitedTrailId = id;
+      });
+    }
   }
 
   void _loadUserName() {
@@ -29,113 +52,116 @@ class _HomeScreenState extends State<HomeScreen> {
     if (user != null &&
         user.displayName != null &&
         user.displayName!.isNotEmpty) {
+
+      final fullName = user.displayName!;
+      final firstName = fullName.split(' ')[0];
+
+      final formattedName = firstName.length > 1
+          ? firstName[0].toUpperCase() + firstName.substring(1).toLowerCase()
+          : firstName.toUpperCase();
+
       setState(() {
-        _userName = user.displayName!.toUpperCase();
+        _userName = formattedName;
       });
     } else {
       setState(() {
-        _userName = 'JOGADOR';
+        _userName = 'Jogador';
       });
     }
   }
+
+  bool _isTrailCompleted(Trail trail, Set<String> completedIds) {
+    if (trail.lessonIds.isEmpty) {
+      return false;
+    }
+    final int completedCount = trail.lessonIds.where((lessonId) => completedIds.contains(lessonId)).length;
+    return completedCount == trail.lessonIds.length;
+  }
+
+  double _calculateProgress(Trail trail, Set<String> completedIds) {
+    if (trail.lessonIds.isEmpty) return 0.0;
+    int completedCount = trail.lessonIds
+        .where((lessonId) => completedIds.contains(lessonId))
+        .length;
+    return completedCount / trail.lessonIds.length;
+  }
+
 
   @override
   Widget build(BuildContext context) {
     final scoreProvider = context.watch<ScoreProvider>();
     final Set<String> completedIds = scoreProvider.completedLessonIds.toSet();
 
-    final theme = Theme.of(context);
-    final backgroundColor = theme.scaffoldBackgroundColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetColor = isDark ? const Color(0xFF1B1B1E) : Colors.white;
 
-    return SingleChildScrollView(
-      child: Container(
-        color: backgroundColor,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(context, _userName),
-            _buildContinueSection(context, completedIds),
-            _buildRecommendedSection(context),
-            const SizedBox(height: 24),
-            _buildYourTrailsSection(context, completedIds),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // HEADER ------------------------------------------------------------------
-
-  Widget _buildHeader(BuildContext context, String userName) {
-    final theme = Theme.of(context);
-    final textColor =
-        theme.textTheme.bodyLarge?.color ?? AppColors.textDark;
-
-    return Container(
-      padding:
-      const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
+    return Scaffold(
+      backgroundColor: _mainPurple,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildHeader(context, _userName),
+
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'BEM VINDO, $userName',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: textColor,
-                  ),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: sheetColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Pronto para o próximo desafio?',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: textColor.withOpacity(0.7),
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Consumer<ScoreProvider>(
-              builder: (context, provider, child) {
-                return Row(
-                  children: [
-                    const Icon(Icons.star,
-                        color: Colors.amber, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      provider.isLoading
-                          ? '...'
-                          : provider.score.toString(),
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.secondary,
+              ),
+              child: StreamBuilder<List<Trail>>(
+                stream: _trailService.getTrailsStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32.0),
+                        child: CircularProgressIndicator(
+                          color: isDark ? Colors.white : _mainPurple,
+                        ),
                       ),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Erro ao carregar trilhas',
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                      ),
+                    );
+                  }
+
+                  final trails = snapshot.data ?? [];
+
+                  if (trails.isEmpty) {
+                    return Center(
+                      child: Text(
+                        "Nenhuma trilha encontrada.",
+                        style: TextStyle(color: isDark ? Colors.white70 : Colors.grey),
+                      ),
+                    );
+                  }
+
+                  final activeTrails = trails.where((trail) => !_isTrailCompleted(trail, completedIds)).toList();
+
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.only(top: 24, bottom: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildContinueSection(context, completedIds, activeTrails, isDark, _lastVisitedTrailId),
+                        _buildRecommendedSection(context, activeTrails, isDark, completedIds),
+                        const SizedBox(height: 24),
+                        _buildYourTrailsSection(context, completedIds, activeTrails, isDark),
+                      ],
                     ),
-                  ],
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ],
@@ -143,25 +169,104 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // CONTINUE SECTION --------------------------------------------------------
+  Widget _buildHeader(BuildContext context, String userName) {
+    return SafeArea(
+      bottom: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 30),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Olá, $userName! 👋',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Pronto para aprender hoje?',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+              ),
+              child: Consumer<ScoreProvider>(
+                builder: (context, provider, child) {
+                  return Row(
+                    children: [
+                      const Icon(Icons.star_rounded, color: Colors.amber, size: 24),
+                      const SizedBox(width: 6),
+                      Text(
+                        provider.isLoading ? '...' : provider.score.toString(),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-  Widget _buildContinueSection(
-      BuildContext context, Set<String> completedIds) {
-    final inProgressTrails = TrailService.getInProgressTrails();
-    if (inProgressTrails.isEmpty) {
+  Widget _buildContinueSection(BuildContext context, Set<String> completedIds, List<Trail> activeTrails, bool isDark, String? lastVisitedId) {
+    Trail? trailToContinue;
+    double trailProgress = 0.0;
+
+    if (lastVisitedId != null) {
+      final foundTrail = activeTrails.where((t) => t.id == lastVisitedId);
+
+      if (foundTrail.isNotEmpty) {
+        final lastTrail = foundTrail.first;
+        final progress = _calculateProgress(lastTrail, completedIds);
+
+        if (progress > 0 && progress < 1.0) {
+          trailToContinue = lastTrail;
+          trailProgress = progress;
+        }
+      }
+    }
+
+    if (trailToContinue == null) {
+      for (var trail in activeTrails) {
+        final progress = _calculateProgress(trail, completedIds);
+        if (progress > 0 && progress < 1.0) {
+          trailToContinue = trail;
+          trailProgress = progress;
+          break;
+        }
+      }
+    }
+
+    if (trailToContinue == null) {
       return const SizedBox.shrink();
     }
-    final firstTrail = inProgressTrails.first;
 
-    final int completedCount = firstTrail.lessons
-        .where((l) => completedIds.contains(l.id))
-        .length;
-    final double progress = (firstTrail.lessons.isEmpty)
-        ? 0.0
-        : (completedCount / firstTrail.lessons.length);
-
-    final textColor =
-        Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textDark;
+    final titleColor = isDark ? Colors.white : AppColors.textDark;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -169,18 +274,19 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Retome de onde parou',
+            'Continue aprendendo',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: textColor,
+              color: titleColor,
             ),
           ),
           const SizedBox(height: 16),
           _buildProgressCard(
             context,
-            trail: firstTrail,
-            progress: progress,
+            trail: trailToContinue,
+            progress: trailProgress,
+            isDark: isDark,
           ),
           const SizedBox(height: 24),
         ],
@@ -188,11 +294,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // RECOMMENDED SECTION -----------------------------------------------------
+  Widget _buildRecommendedSection(BuildContext context, List<Trail> activeTrails, bool isDark, Set<String> completedIds) {
+    final titleColor = isDark ? Colors.white : AppColors.textDark;
 
-  Widget _buildRecommendedSection(BuildContext context) {
-    final textColor =
-        Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textDark;
+    final recommended = activeTrails.where((t) {
+      final progress = _calculateProgress(t, completedIds);
+      return progress < 0.1;
+    }).toList();
+
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -200,21 +309,22 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Trilhas Recomendadas',
+            'Sugestões para você',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: textColor,
+              color: titleColor,
             ),
           ),
           const SizedBox(height: 16),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
             child: Row(
-              children: TrailService.getRecommendedTrails().map((trail) {
+              children: recommended.map((trail) {
                 return Padding(
                   padding: const EdgeInsets.only(right: 16),
-                  child: _buildTrailCard(context, trail: trail),
+                  child: _buildTrailCard(context, trail: trail, isDark: isDark),
                 );
               }).toList(),
             ),
@@ -224,12 +334,37 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // YOUR TRAILS SECTION -----------------------------------------------------
+  Widget _buildYourTrailsSection(BuildContext context, Set<String> completedIds, List<Trail> activeTrails, bool isDark) {
+    final titleColor = isDark ? Colors.white : AppColors.textDark;
 
-  Widget _buildYourTrailsSection(
-      BuildContext context, Set<String> completedIds) {
-    final textColor =
-        Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textDark;
+    if (activeTrails.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Parabéns!',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: titleColor,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Você concluiu todas as trilhas disponíveis. Ótimo trabalho!',
+              style: TextStyle(
+                fontSize: 16,
+                color: titleColor.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      );
+    }
+
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -237,22 +372,18 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Suas Trilhas',
+            'Explorar Trilhas',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: textColor,
+              color: titleColor,
             ),
           ),
           const SizedBox(height: 16),
           Column(
-            children: TrailService.getRecommendedTrails().map((trail) {
-              final int completedCount = trail.lessons
-                  .where((l) => completedIds.contains(l.id))
-                  .length;
-              final double progress = (trail.lessons.isEmpty)
-                  ? 0.0
-                  : (completedCount / trail.lessons.length);
+            children: activeTrails.map((trail) {
+
+              double progress = _calculateProgress(trail, completedIds);
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -260,6 +391,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   trail: trail,
                   progress: progress,
+                  isDark: isDark,
                 ),
               );
             }).toList(),
@@ -269,18 +401,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // CARDS -------------------------------------------------------------------
-
   Widget _buildProgressCard(
       BuildContext context, {
         required Trail trail,
         required double progress,
+        required bool isDark,
       }) {
     String percentageLabel = '${(progress * 100).toInt()}%';
 
-    final theme = Theme.of(context);
-    final textColor =
-        theme.textTheme.bodyLarge?.color ?? AppColors.textDark;
+    final cardColor = isDark ? const Color(0xFF2A2A2D) : Colors.white;
+    final borderColor = isDark ? Colors.white10 : Colors.grey.shade100;
+    final titleColor = isDark ? Colors.white : AppColors.textDark;
+    final subTitleColor = isDark ? Colors.white70 : AppColors.textDark.withOpacity(0.6);
 
     return GestureDetector(
       onTap: () {
@@ -293,12 +425,14 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: theme.cardColor,
+          color: cardColor,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
               blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -309,12 +443,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: trail.iconColor.withOpacity(0.12),
+                    color: _mainPurple.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     trail.icon,
-                    color: trail.iconColor,
+                    color: isDark ? const Color(0xFFB39DDB) : _mainPurple,
                     size: 28,
                   ),
                 ),
@@ -328,38 +462,41 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: textColor,
+                          color: titleColor,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${trail.lessons.length} Lições • ${trail.level}',
+                        '${trail.lessonIds.length} Lições • ${trail.level}',
                         style: TextStyle(
-                          color: textColor.withOpacity(0.7),
-                          fontSize: 12,
+                          color: subTitleColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
                 ),
                 Icon(
-                  Icons.chevron_right,
-                  color: textColor.withOpacity(0.5),
+                  Icons.chevron_right_rounded,
+                  color: isDark ? Colors.white30 : Colors.grey[400],
+                  size: 28,
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            _buildProgressBar(context, progress, percentageLabel),
+            _buildProgressBar(context, progress, percentageLabel, isDark),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTrailCard(BuildContext context, {required Trail trail}) {
-    final theme = Theme.of(context);
-    final textColor =
-        theme.textTheme.bodyLarge?.color ?? AppColors.textDark;
+  Widget _buildTrailCard(BuildContext context, {required Trail trail, required bool isDark}) {
+    final cardColor = isDark ? const Color(0xFF2A2A2D) : Colors.white;
+    final borderColor = isDark ? Colors.white10 : Colors.grey.shade100;
+    final titleColor = isDark ? Colors.white : AppColors.textDark;
+    final subTitleColor = isDark ? Colors.white70 : AppColors.textDark.withOpacity(0.6);
 
     return GestureDetector(
       onTap: () {
@@ -373,12 +510,14 @@ class _HomeScreenState extends State<HomeScreen> {
         width: 160,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: theme.cardColor,
+          color: cardColor,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
               blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -388,7 +527,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: trail.iconColor.withOpacity(0.12),
+                color: trail.iconColor.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -400,18 +539,21 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 12),
             Text(
               trail.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: textColor,
+                color: titleColor,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               trail.level,
               style: TextStyle(
-                color: textColor.withOpacity(0.7),
+                color: subTitleColor,
                 fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -420,12 +562,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // PROGRESS BAR ------------------------------------------------------------
-
   Widget _buildProgressBar(
-      BuildContext context, double progress, String percentageLabel) {
-    final isDark =
-        Theme.of(context).brightness == Brightness.dark;
+      BuildContext context, double progress, String percentageLabel, bool isDark) {
 
     return Stack(
       children: [
@@ -433,22 +571,22 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(10),
           child: LinearProgressIndicator(
             value: progress,
-            backgroundColor:
-            isDark ? Colors.grey[800] : Colors.grey[300],
-            valueColor: const AlwaysStoppedAnimation<Color>(
-              Colors.deepPurple,
+            backgroundColor: isDark ? Colors.grey[700] : Colors.grey[200],
+            valueColor: AlwaysStoppedAnimation<Color>(
+              isDark ? const Color(0xFFB39DDB) : _mainPurple, // Lilás no dark, Roxo no light
             ),
-            minHeight: 16,
+            minHeight: 18,
           ),
         ),
         Positioned.fill(
           child: Center(
             child: Text(
               percentageLabel,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: isDark ? Colors.black87 : Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: 12,
+                fontSize: 11,
+                letterSpacing: 0.5,
               ),
             ),
           ),
