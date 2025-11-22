@@ -108,7 +108,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.code, size: 80, color: AppColors.blue),
+                  Image.asset(
+                    'assets/images/duck.png',
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.contain,
+                  ),
                   const SizedBox(height: 24),
                   Text(
                     'Crie sua conta',
@@ -121,7 +126,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Campos de Texto
                   _buildTextField(
                     controller: _nameController,
                     label: 'Nome',
@@ -129,6 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     validator: (value) => (value?.isEmpty ?? true) ? 'Campo obrigatório' : null,
                   ),
                   const SizedBox(height: 16),
+
                   _buildTextField(
                     controller: _emailController,
                     label: 'E-mail',
@@ -137,6 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     validator: (value) => (value?.isEmpty ?? true) ? 'Campo obrigatório' : null,
                   ),
                   const SizedBox(height: 16),
+
                   _buildTextField(
                     controller: _passwordController,
                     label: 'Senha',
@@ -149,6 +155,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
+
                   _buildTextField(
                     controller: _confirmPasswordController,
                     label: 'Confirmar Senha',
