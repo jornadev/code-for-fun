@@ -18,6 +18,11 @@ class _LessonScreenState extends State<LessonScreen> {
   final Color _correctGreen = const Color(0xFF58CC02);
   final Color _wrongRed = const Color(0xFFFF4B4B);
 
+  // Cores para o Modo Dark
+  final Color _darkBackground = const Color(0xFF121212);
+  final Color _darkSurface = const Color(0xFF1E1E1E);
+  final Color _darkText = const Color(0xFFE0E0E0);
+
   int _currentQuestionIndex = 0;
   Answer? _selectedAnswer;
   bool _isAnswerChecked = false;
@@ -105,10 +110,13 @@ class _LessonScreenState extends State<LessonScreen> {
   }
 
   void _showHintDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showDialog(
       context: context,
       builder: (ctx) {
         return AlertDialog(
+          backgroundColor: isDark ? _darkSurface : Colors.white,
           title: const Row(
             children: [
               Icon(Icons.lightbulb_outline, color: Colors.amber),
@@ -118,7 +126,7 @@ class _LessonScreenState extends State<LessonScreen> {
           ),
           content: Text(
             _currentQuestion.hintText ?? 'Não há dicas disponíveis para esta pergunta. Tente revisar o módulo.',
-            style: const TextStyle(fontSize: 16),
+            style: TextStyle(fontSize: 16, color: isDark ? _darkText : Colors.black87),
           ),
           actions: [
             TextButton(
@@ -130,14 +138,17 @@ class _LessonScreenState extends State<LessonScreen> {
       },
     );
   }
+
   void _showCompletionDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          backgroundColor: Colors.white,
+          backgroundColor: isDark ? _darkSurface : Colors.white,
           child: Padding(
             padding: const EdgeInsets.all(32.0),
             child: Column(
@@ -178,7 +189,7 @@ class _LessonScreenState extends State<LessonScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.grey[600],
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
                     fontWeight: FontWeight.w500,
                     height: 1.5,
                   ),
@@ -218,15 +229,18 @@ class _LessonScreenState extends State<LessonScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Detecta se o modo escuro está ativo
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final double progress = (_currentQuestionIndex + 1) / widget.lesson.questions.length;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? _darkBackground : Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? _darkBackground : Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.close_rounded, color: Colors.grey[400], size: 32),
+          icon: Icon(Icons.close_rounded, color: isDark ? Colors.grey[400] : Colors.grey[400], size: 32),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: ClipRRect(
@@ -234,7 +248,7 @@ class _LessonScreenState extends State<LessonScreen> {
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 12,
-            backgroundColor: Colors.grey[200],
+            backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
             valueColor: AlwaysStoppedAnimation<Color>(_correctGreen),
           ),
         ),
@@ -254,7 +268,7 @@ class _LessonScreenState extends State<LessonScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey[600],
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -263,17 +277,17 @@ class _LessonScreenState extends State<LessonScreen> {
                   Text(
                     _currentQuestion.text,
                     textAlign: TextAlign.left,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
-                      color: Color(0xFF2B2B2B),
+                      color: isDark ? Colors.white : const Color(0xFF2B2B2B),
                       height: 1.3,
                     ),
                   ),
                   const SizedBox(height: 40),
 
                   ..._currentQuestion.answers
-                      .map((answer) => _buildAnswerOption(answer))
+                      .map((answer) => _buildAnswerOption(answer, isDark))
                       .toList(),
                 ],
               ),
@@ -328,36 +342,37 @@ class _LessonScreenState extends State<LessonScreen> {
           ),
         ],
       ),
-      bottomSheet: _isAnswerChecked ? _buildFeedbackSheet() : null,
+      bottomSheet: _isAnswerChecked ? _buildFeedbackSheet(isDark) : null,
     );
   }
 
-  Widget _buildAnswerOption(Answer answer) {
+  Widget _buildAnswerOption(Answer answer, bool isDark) {
     final bool isSelected = _selectedAnswer == answer;
 
-    Color borderColor = Colors.grey[300]!;
-    Color bgColor = Colors.white;
-    Color textColor = const Color(0xFF4B4B4B);
+    // Lógica de cores baseada no tema e seleção
+    Color borderColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
+    Color bgColor = isDark ? _darkSurface : Colors.white;
+    Color textColor = isDark ? _darkText : const Color(0xFF4B4B4B);
     double borderWidth = 2.0;
 
     if (_isAnswerChecked) {
       if (isSelected) {
         if (answer.isCorrect) {
           borderColor = _correctGreen;
-          bgColor = _correctGreen.withOpacity(0.1);
+          bgColor = _correctGreen.withOpacity(isDark ? 0.2 : 0.1); // Um pouco mais forte no dark
           textColor = _correctGreen;
         } else {
           borderColor = _wrongRed;
-          bgColor = _wrongRed.withOpacity(0.1);
+          bgColor = _wrongRed.withOpacity(isDark ? 0.2 : 0.1);
           textColor = _wrongRed;
         }
       } else {
-        borderColor = Colors.grey[200]!;
-        textColor = Colors.grey[400]!;
+        borderColor = isDark ? Colors.grey[800]! : Colors.grey[200]!;
+        textColor = isDark ? Colors.grey[600]! : Colors.grey[400]!;
       }
     } else if (isSelected) {
       borderColor = _mainPurple;
-      bgColor = _mainPurple.withOpacity(0.08);
+      bgColor = _mainPurple.withOpacity(isDark ? 0.2 : 0.08);
       textColor = _mainPurple;
       borderWidth = 3.0;
     }
@@ -384,10 +399,12 @@ class _LessonScreenState extends State<LessonScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: _isAnswerChecked && isSelected ? borderColor : Colors.grey[300]!,
+                  color: _isAnswerChecked && isSelected
+                      ? borderColor
+                      : (isDark && !isSelected ? Colors.grey[600]! : (isSelected ? borderColor : Colors.grey[300]!)),
                   width: 2,
                 ),
-                color: Colors.white,
+                color: isDark && !isSelected ? Colors.transparent : Colors.white,
               ),
               child: _isAnswerChecked && isSelected
                   ? Icon(
@@ -416,7 +433,7 @@ class _LessonScreenState extends State<LessonScreen> {
     );
   }
 
-  Widget _buildFeedbackSheet() {
+  Widget _buildFeedbackSheet(bool isDark) {
     if (_selectedAnswer == null) return const SizedBox.shrink();
 
     final bool isCorrect = _selectedAnswer!.isCorrect;
@@ -430,7 +447,7 @@ class _LessonScreenState extends State<LessonScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? _darkSurface : Colors.white, // Fundo adaptativo
         border: Border(top: BorderSide(color: statusColor.withOpacity(0.1), width: 2)),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))
